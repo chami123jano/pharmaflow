@@ -1,0 +1,17 @@
+{
+  // Deploys the built site to Cloudflare as static assets. There is no Worker
+  // code: requests that match a file are served straight from the edge without
+  // running anything, which is why this costs nothing to host.
+  //
+  // The name here is the product's, not any one shop's, so the public copy of
+  // this repo carries nobody's details. A particular shop overrides it at
+  // deploy time:  npx wrangler deploy --name my-shop
+  "name": "pharmaflow",
+  "compatibility_date": "2026-09-25",
+  "assets": {
+    "directory": "./dist",
+    // Any path that is not a file returns index.html with a 200, so a refresh
+    // or a shared link opens the app instead of a 404.
+    "not_found_handling": "single-page-application"
+  }
+}

@@ -59,17 +59,29 @@ cached figure for takings would be worse than an honest "no connection".
 
 ## Deploying
 
-Cloudflare Pages, free tier:
+Cloudflare Workers, free tier. `wrangler.jsonc` declares the built `dist/` as
+static assets with no Worker code, so a request that matches a file is served
+from the edge without running anything.
+
+In the dashboard, **Workers & Pages -> Create -> Import a repository**:
 
 | Setting | Value |
 |---|---|
 | Root directory | `web` |
 | Build command | `npm run build` |
-| Output directory | `dist` |
-| Environment variables | `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY` |
+| Deploy command | `npx wrangler deploy` |
+| Environment variables | `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`, `VITE_SHOP_NAME` |
 
 The variables are read **at build time**, not run time, so changing one needs a
-rebuild, not just a restart.
+rebuild rather than a restart. A missing Supabase variable fails the build on
+purpose: a site that cannot reach its data should not publish.
+
+`wrangler.jsonc` names the Worker `pharmaflow`, deliberately generic. A
+particular shop overrides it without touching the repo:
+
+```
+npx wrangler deploy --name my-shop
+```
 
 The build emits two files Cloudflare reads:
 
