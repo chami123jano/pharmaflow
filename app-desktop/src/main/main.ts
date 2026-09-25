@@ -436,9 +436,23 @@ ipcMain.handle('util:saveReceiptPDF', async (_e, html: string, filename: string)
     printWindows.add(win);
     await win.loadURL('data:text/html;charset=utf-8,' + encodeURIComponent(html || ''));
 
-    // 80mm roll width, with the height left to grow with the content.
+    /**
+     * Size the page to the receipt.
+     *
+     * printToPDF takes a custom pageSize in INCHES, not microns. It was being
+     * given 80000 x 200000, which produced a page eighty thousand inches wide
+     * with the receipt in one corner — the files opened blank unless you
+     * zoomed absurdly far in. Measuring the rendered content and converting at
+     * 96 CSS pixels to the inch gives a page the shape of the actual roll.
+     */
+    const ROLL_MM = 80;
+    const size = await win.webContents.executeJavaScript(
+      '({ h: Math.ceil(document.body.scrollHeight) })'
+    ) as { h: number };
+    const heightIn = Math.max(size.h / 96, 1) + 0.15; // a little clearance at the foot
+
     const pdf = await win.webContents.printToPDF({
-      pageSize: { width: 80000, height: 200000 },
+      pageSize: { width: ROLL_MM / 25.4, height: heightIn },
       margins: { top: 0, bottom: 0, left: 0, right: 0 },
       printBackground: true,
     });

@@ -164,6 +164,29 @@ Components subscribe to this event in `useEffect` to re-fetch.
 
 `ipc/sales.ts → sales:create` wraps all stock checks and inserts in `db.transaction(fn)()`. The skeleton sale row is inserted first (to satisfy FK), then items are processed in a loop (stock check → decrement → insert sale_item), then the total is back-filled. Any throw inside the transaction triggers automatic `ROLLBACK`.
 
+### Branding: one codebase, two identities
+
+This repo is published twice — privately as the shop's till, publicly as the
+generic product. **The source is identical in both.** Do not hardcode a shop
+name anywhere; that forks the code and every later change has to be made twice.
+
+- **Desktop**: `pharmacy.name/address/phone/regno/footer` in `settings`, read
+  through `lib/shop.tsx` (`useShop()`). Default `'PharmaFlow'`. Edited in
+  Settings → Shop details.
+- **Website**: `VITE_SHOP_NAME` at build time, via `lib/shop.ts`. The web
+  manifest is rewritten by `scripts/postbuild.mjs` for the same reason the CSP
+  is — a fixed copy would be wrong for every other shop.
+- **Packaged program**: `SHOP_NAME=... npm run package`, read by
+  `electron-builder.config.cjs`.
+
+**`app.setName('pharmaflow-desktop')` in `main.ts` must not be removed or
+changed.** Electron derives `userData` from the app name, so renaming the
+product would move the data folder and orphan the database — still on disk,
+invisible to the app. `appId` is fixed for the same class of reason: Windows
+identifies an installed program by it.
+
+The receipt lives in `renderer/src/lib/receipt.ts`, sized for a 76mm roll.
+
 ### The website (`web/`)
 
 A separate Vite + React + Tailwind static site — no framework server, so it
