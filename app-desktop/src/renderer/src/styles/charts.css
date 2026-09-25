@@ -1,0 +1,31 @@
+/* Chart enhancements */
+.chart-container { width: 100%; height: 280px; position: relative; overflow: hidden; }
+.chart-card { background: white; border: 1px solid #e5e7eb; border-radius: 0.75rem; padding: 1.25rem; box-shadow: 0 1px 2px rgba(0,0,0,0.04); }
+.chart-title { font-weight: 700; margin-bottom: 0.75rem; color: #111827; }
+
+/* Smooth height animation via data-height attribute */
+.chart-bar { height: 10%; transition: height 500ms ease, transform 200ms ease; box-shadow: 0 2px 6px rgba(59,130,246,0.25); border-top-left-radius: 0.5rem; border-top-right-radius: 0.5rem; }
+.chart-bar[data-height="0"] { height: 8%; }
+.chart-bar[data-height="5"] { height: 10%; }
+/* dynamic mapping: use attribute and JS to set exact height% where possible */
+.chart-bar { height: calc(var(--h, 10) * 1%); }
+
+/* Provide CSS fallback for attribute-based heights using progressive enhancement */
+[data-height] { --h: attr(data-height number); }
+
+/* Subtle grid lines */
+.chart-container::before,
+.chart-container::after {
+	content: "";
+	position: absolute;
+	left: 0; right: 0;
+	height: 1px;
+	background: linear-gradient(to right, rgba(0,0,0,0.06) 0%, rgba(0,0,0,0.02) 100%);
+}
+.chart-bar:hover { transform: translateY(-2px); }
+.chart-container::before { top: 25%; }
+.chart-container::after { top: 60%; }
+
+/* Fade-in for chart area updates */
+.chart-container { animation: chartFade 250ms ease; }
+@keyframes chartFade { from { opacity: .9; } to { opacity: 1; } }

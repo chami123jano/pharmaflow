@@ -1,0 +1,3 @@
+# Single page app: every path is served by index.html so a refresh or a shared
+# link never lands on a 404.
+/*    /index.html   200
