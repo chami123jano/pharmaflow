@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useAuth, canSeeMoney } from './lib/auth';
 import { Spinner } from './components/ui';
 import { SHOP_NAME } from './lib/shop';
+import { initials } from './lib/initials';
 import Login from './routes/Login';
 import Today from './routes/Today';
 import Reports from './routes/Reports';
@@ -53,7 +54,7 @@ export default function App() {
       <header className="safe-top sticky top-0 z-30 border-b backdrop-blur" style={{ borderColor: 'var(--border)', background: 'color-mix(in srgb, var(--bg) 88%, transparent)' }}>
         <div className="mx-auto flex max-w-3xl items-center justify-between gap-3 px-4 py-3">
           <div className="flex items-center gap-2.5">
-            <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-600 text-sm font-bold text-white">Rx</span>
+            <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-600 text-sm font-bold text-white">{initials(SHOP_NAME)}</span>
             <div>
               <p className="text-sm font-bold leading-tight">{SHOP_NAME}</p>
               <p className="faint text-[11px] leading-tight">{owner ? 'Owner' : 'Staff'}</p>

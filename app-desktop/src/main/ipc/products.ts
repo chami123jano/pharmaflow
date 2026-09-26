@@ -167,11 +167,23 @@ ipcMain.handle('products:update', (_e, id: string, patch: any) => {
   const db = getDb();
   const existing = db.prepare('SELECT * FROM products WHERE id = ?').get(id);
   if (!existing) return { ok: false, error: 'NOT_FOUND' };
-  const merged = { ...existing, ...patch, updated_at: new Date().toISOString() };
+  /**
+   * Stock is not editable here, whatever the caller sends.
+   *
+   * `products.stock` is a cache of the sum of the batches, and every sale or
+   * delivery recomputes it. Writing a number into it looked like it worked and
+   * then silently reverted the moment anything else touched the product — the
+   * quantity typed in simply vanished. Worse, in between, the shelf count on
+   * screen disagreed with what the till could actually sell.
+   *
+   * Stock changes by receiving a delivery or adjusting a batch. Nowhere else.
+   */
+  const { stock: _ignoredStock, ...safePatch } = patch || {};
+  const merged = { ...existing, ...safePatch, updated_at: new Date().toISOString() };
   try {
-    log.info('[IPC products:update] updating', { id, patch });
-    db.prepare(`UPDATE products SET name=?, sku=?, price=?, stock=?, expiry=?, description=?, supplier=?, category=?, generic_name=?, barcode=?, updated_at=? WHERE id=?`)
-      .run(merged.name, merged.sku, merged.price, merged.stock, merged.expiry || null, merged.description || null, merged.supplier || null, merged.category || null,
+    log.info('[IPC products:update] updating', { id, patch: safePatch });
+    db.prepare(`UPDATE products SET name=?, sku=?, price=?, expiry=?, description=?, supplier=?, category=?, generic_name=?, barcode=?, updated_at=? WHERE id=?`)
+      .run(merged.name, merged.sku, merged.price, merged.expiry || null, merged.description || null, merged.supplier || null, merged.category || null,
            merged.generic_name || null, merged.barcode || null, merged.updated_at, id);
     recordEvent('product.upsert', { id, name: merged.name, sku: merged.sku, price: merged.price,
       expiry: merged.expiry || null, description: merged.description || null, supplier: merged.supplier || null,

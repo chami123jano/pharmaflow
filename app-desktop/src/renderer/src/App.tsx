@@ -13,6 +13,7 @@ import Reports from './routes/Reports';
 import Users from './routes/Users';
 import Settings from './routes/Settings';
 import { useShop } from './lib/shop';
+import { initials } from './lib/initials';
 
 const NAV = [
   { key: 'dashboard', label: 'Dashboard', icon: '[D]', adminOnly: false },
@@ -111,7 +112,7 @@ function AppInner() {
           <div className="flex justify-between h-16">
             {/* Logo */}
             <div className="flex items-center gap-3">
-              <div className="w-9 h-9 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl flex items-center justify-center text-white font-bold text-sm shadow-sm shadow-blue-500/30">Rx</div>
+              <div className="w-9 h-9 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl flex items-center justify-center text-white font-bold text-sm shadow-sm shadow-blue-500/30">{initials(shop.name)}</div>
               <span className={`text-lg font-bold tracking-tight ${darkMode ? 'text-white' : 'text-slate-900'}`}>{shop.name}</span>
             </div>
 

@@ -78,7 +78,9 @@ export default function Inventory({ user, tokens, darkMode }: { user: any; token
 
   async function handleEdit(e: React.FormEvent) {
     e.preventDefault(); setLoading(true);
-    const res: any = await window.api?.products?.update?.(showEdit.id, { ...form, price: Number(form.price), stock: Number(form.stock) });
+    // stock is deliberately not sent — it belongs to the batches
+    const { stock: _unused, ...details } = form;
+    const res: any = await window.api?.products?.update?.(showEdit.id, { ...details, price: Number(form.price) });
     setLoading(false);
     if (res?.ok) { toast.success('Product updated!'); setShowEdit(null); fetchProducts(); }
     else toast.error(res?.error || 'Failed');
@@ -211,7 +213,7 @@ export default function Inventory({ user, tokens, darkMode }: { user: any; token
                   <td className="px-4 py-3">
                     <div className="flex gap-1">
                       <button onClick={e=>{e.stopPropagation();openEdit(p);}} className="px-2 py-1 text-xs bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 font-medium">Edit</button>
-                      <button onClick={e=>{e.stopPropagation();setRestock(p);}} className="px-2 py-1 text-xs bg-green-100 text-green-700 rounded-lg hover:bg-green-200 font-medium">Batches</button>
+                      <button onClick={e=>{e.stopPropagation();setRestock(p);}} className="px-2 py-1 text-xs bg-green-100 text-green-700 rounded-lg hover:bg-green-200 font-medium">Stock</button>
                       <button onClick={e=>{e.stopPropagation();handleDelete(p);}} className="px-2 py-1 text-xs bg-red-100 text-red-700 rounded-lg hover:bg-red-200 font-medium">Del</button>
                     </div>
                   </td>
@@ -292,8 +294,20 @@ export default function Inventory({ user, tokens, darkMode }: { user: any; token
                 </select></div>
               <div><label className={lbl}>Price (LKR) *</label>
                 <input required type="number" min="0" step="0.01" className={inp} value={form.price} onChange={e=>setForm(f=>({...f,price:e.target.value}))} /></div>
-              <div><label className={lbl}>Stock</label>
-                <input type="number" min="0" className={inp} value={form.stock} onChange={e=>setForm(f=>({...f,stock:e.target.value}))} /></div>
+              <div>
+                <label className={lbl}>Stock</label>
+                {/* Read-only on purpose: stock is the sum of the batches, so a
+                    number typed here used to vanish the next time anything
+                    touched the product. */}
+                <div className={`flex items-center gap-2 ${inp} cursor-default`}>
+                  <span className="font-bold">{showEdit?.stock ?? 0}</span>
+                  <button type="button"
+                    onClick={() => { const p = showEdit; setShowEdit(null); setRestock(p); }}
+                    className="ml-auto text-xs font-semibold text-blue-600 hover:underline">
+                    Add or adjust stock
+                  </button>
+                </div>
+              </div>
               <div><label className={lbl}>Expiry Date</label>
                 <input type="date" className={inp} value={form.expiry} onChange={e=>setForm(f=>({...f,expiry:e.target.value}))} /></div>
               <div><label className={lbl}>Supplier</label>

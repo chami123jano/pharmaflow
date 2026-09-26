@@ -201,7 +201,11 @@ which is why it still answers when the PC is off.
   and compiled into the bundle. A test asserts the key alone reads nothing.
 - **The product editor has no stock field**, and must not grow one. Stock is a
   delta from the till; a website writing an absolute number would erase
-  concurrent sales.
+  concurrent sales. The desktop follows the same rule: `products:update` strips
+  `stock` from its patch whatever the caller sends, because `products.stock` is
+  a cache of the batches and a number written into it vanished the next time
+  anything recomputed. Stock moves through `batches:receive`,
+  `products:adjustStock` or `batches:adjust` — nowhere else.
 - A product edit inserts the `sync_events` row **before** upserting the mirror
   row. If only one succeeds it must be the one the till will see, or the till's
   next snapshot silently reverts the edit.

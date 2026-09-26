@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useAuth } from '../lib/auth';
 import { SHOP_NAME } from '../lib/shop';
+import { initials } from '../lib/initials';
 
 export default function Login() {
   const { signIn } = useAuth();
@@ -24,7 +25,7 @@ export default function Login() {
     <div className="mx-auto flex min-h-full max-w-sm flex-col justify-center p-6">
       <div className="mb-7 text-center">
         <span className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-blue-600 text-xl font-bold text-white">
-          Rx
+          {initials(SHOP_NAME)}
         </span>
         <h1 className="mt-4 text-2xl font-bold">{SHOP_NAME}</h1>
         <p className="muted mt-1 text-sm">Your shop, from anywhere.</p>
