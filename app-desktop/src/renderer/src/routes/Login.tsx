@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useShop } from '../lib/shop';
+import Logo from '../components/Logo';
 
 export default function Login({ onLogin }: { onLogin: (user: any, tokens: any) => void }) {
   const shop = useShop();
@@ -26,13 +27,17 @@ export default function Login({ onLogin }: { onLogin: (user: any, tokens: any) =
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-600 to-blue-800 flex items-center justify-center p-4">
+    <div className="fixed inset-0 z-40 bg-gradient-to-br from-blue-600 to-blue-800 flex items-center justify-center p-4 overflow-auto">
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-8">
         {/* Logo */}
         <div className="text-center mb-8">
-          <div className="w-16 h-16 bg-blue-600 rounded-2xl flex items-center justify-center text-white text-2xl font-bold mx-auto mb-4 shadow-lg">Px</div>
+          <Logo size={72} mark={shop.mark} className="mx-auto mb-4 drop-shadow-md" />
           <h1 className="text-2xl font-bold text-gray-900">{shop.name}</h1>
-          <p className="text-sm text-gray-500 mt-1">Pharmacy Management System</p>
+          {(shop.address || shop.phone) && (
+            <p className="text-sm text-gray-500 mt-1">
+              {[shop.address, shop.phone && 'Tel: ' + shop.phone].filter(Boolean).join(' · ')}
+            </p>
+          )}
         </div>
 
         <form onSubmit={handleLogin} className="space-y-5">
@@ -76,7 +81,7 @@ export default function Login({ onLogin }: { onLogin: (user: any, tokens: any) =
           </button>
         </form>
 
-        <p className="text-center text-xs text-gray-400 mt-6">{shop.address || shop.phone || 'Point of sale'}</p>
+        <p className="text-center text-xs text-gray-400 mt-6">Point of sale</p>
       </div>
     </div>
   );

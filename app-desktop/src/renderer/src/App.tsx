@@ -104,10 +104,11 @@ function AppInner() {
       {/* Mounted above everything: the close prompt must appear whatever screen
           the cashier happens to be on, and even before they have signed in. */}
       <ExitGuard darkMode={darkMode} />
-      {/* Top nav */}
+      {/* Top nav. Hidden until someone has signed in — a bar showing the shop's
+          name above the login screen looked like a half-loaded page. */}
       <nav className={`fixed w-full z-50 border-b backdrop-blur-md transition-colors duration-300 ${
-        darkMode ? 'bg-slate-900/80 border-slate-800' : 'bg-white/85 border-slate-200'
-      }`}>
+        user ? '' : 'hidden'
+      } ${darkMode ? 'bg-slate-900/80 border-slate-800' : 'bg-white/85 border-slate-200'}`}>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between h-16">
             {/* Logo */}
