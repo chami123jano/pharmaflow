@@ -47,7 +47,10 @@ export function Stat({ label, value, sub, tone }: { label: string; value: string
   return (
     <div className="card p-4">
       <p className="faint text-[11px] font-bold uppercase tracking-wide">{label}</p>
-      <p className={`mt-1 text-2xl font-bold ${tone || ''}`}>{value}</p>
+      {/* Fluid rather than fixed: "Rs. 27,530.50" broke onto two lines in a
+          half-width card on a phone, which made the figure hard to read at a
+          glance — the one thing a headline number has to do. */}
+      <p className={`mt-1 font-bold tabular-nums whitespace-nowrap text-[clamp(1.05rem,5vw,1.5rem)] ${tone || ''}`}>{value}</p>
       {sub && <p className="muted mt-0.5 text-xs">{sub}</p>}
     </div>
   );

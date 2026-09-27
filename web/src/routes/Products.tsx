@@ -103,7 +103,11 @@ export default function Products() {
                     </p>
                   </div>
                   <div className="shrink-0 text-right">
-                    <p className="font-bold">{lkr(p.price)}</p>
+                    {/* Matches the till: zero is not a price, it is something
+                        nobody has filled in yet. */}
+                    <p className={`font-bold ${Number(p.price) > 0 ? '' : 'text-amber-500'}`}>
+                      {Number(p.price) > 0 ? lkr(p.price) : 'no price'}
+                    </p>
                     <div className="mt-0.5 flex items-center justify-end gap-1.5">
                       {ex.tone !== 'none' && ex.tone !== 'ok' && <Pill tone={ex.tone}>{ex.label}</Pill>}
                       <span className={`text-xs font-semibold ${p.stock <= 0 ? 'text-red-600' : p.stock < 10 ? 'text-amber-600' : 'muted'}`}>

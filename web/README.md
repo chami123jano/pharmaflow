@@ -50,6 +50,23 @@ In Authentication → Providers, turn **public sign-ups off**. Otherwise strange
 can create accounts. They would still see nothing without a role, but there is
 no reason to let them in the door.
 
+## Looking at a page without signing in
+
+Every page needs a session, which makes a design change hard to check — and
+asking someone for their password to look at a layout is not reasonable. So
+there is a preview harness:
+
+```bash
+npx vite dev --config vite.preview.config.ts
+# http://localhost:5176/preview.html?p=today   (or reports, products, stock)
+```
+
+`src/__preview/stub.ts` stands in for the Supabase client and returns plausible
+rows, so the pages render against realistic data — a voided sale, a product
+with no price, stock running out. It is aliased in only by
+`vite.preview.config.ts`, so none of it reaches a real build; `npm run build`
+produces `index.html` alone and the stub's rows appear nowhere in the bundle.
+
 ## On a phone
 
 `manifest.webmanifest` makes it installable: Share -> Add to Home Screen on
