@@ -13,56 +13,87 @@ function createToken(userId: string) {
   return token;
 }
 
+/**
+  * Accepts a username or an email.
+  *
+  * The till asks for a username, but anyone who learned the email still gets
+  * in, and the website uses emails throughout. Matching either costs one extra
+  * comparison and avoids splitting the two apps' logins.
+  */
+function findUser(db: any, who: string) {
+  const key = String(who || '').trim().toLowerCase();
+  if (!key) return null;
+  return db.prepare('SELECT * FROM users WHERE lower(username) = ? OR lower(email) = ?').get(key, key);
+}
+
 ipcMain.handle('auth:login', async (_e, email: string, password: string) => {
   try {
     const db = getDb();
     try { await ensureSchema(); } catch {}
     let user: any;
     try {
-      user = db.prepare('SELECT * FROM users WHERE email = ?').get(email);
+      user = findUser(db, email);
     } catch (err: any) {
       if ((err?.message||'').includes('no such table')) {
         await ensureSchema();
-        user = db.prepare('SELECT * FROM users WHERE email = ?').get(email);
+        user = findUser(db, email);
       } else throw err;
     }
     if (!user) return { ok: false, error: 'INVALID_CREDENTIALS' };
     const valid = await verifyPassword(user.password_hash, password);
     if (!valid) return { ok: false, error: 'INVALID_CREDENTIALS' };
     const token = createToken(user.id);
-    return { ok: true, token, user: { id: user.id, email: user.email, role: user.role, name: user.name || user.email.split('@')[0] } };
+    return { ok: true, token, user: { id: user.id, email: user.email, username: user.username,
+      role: user.role, name: user.name || user.username || user.email.split('@')[0] } };
   } catch (err: any) {
     log.error('[Auth] login error', err);
     return { ok: false, error: 'LOGIN_ERROR', message: err?.message || 'Unexpected error' };
   }
 });
 
-ipcMain.handle('auth:register', async (_e, email: string, password: string, role = 'clerk', name?: string) => {
+/**
+ * Creates an account from a username; an email is optional.
+ *
+ * A cashier does not necessarily have an email and should not need one to be
+ * given a till login. The column is NOT NULL from the original schema, so one
+ * is synthesised as <username>@local when none is given — invisible, and it
+ * keeps the constraint honest without a table rebuild.
+ */
+ipcMain.handle('auth:register', async (_e, username: string, password: string, role = 'clerk', name?: string, email?: string) => {
   const db = getDb();
-  const exists = db.prepare('SELECT 1 FROM users WHERE email = ?').get(email);
-  if (exists) return { ok: false, error: 'EMAIL_EXISTS' };
+  const uname = String(username || '').trim().toLowerCase();
+  if (!uname) return { ok: false, error: 'A username is required' };
   if (!password || password.length < 4) return { ok: false, error: 'PASSWORD_TOO_SHORT' };
+
+  const mail = String(email || '').trim().toLowerCase() || `${uname}@local`;
+  if (db.prepare('SELECT 1 FROM users WHERE lower(username) = ?').get(uname)) {
+    return { ok: false, error: `The username "${uname}" is already taken` };
+  }
+  if (db.prepare('SELECT 1 FROM users WHERE lower(email) = ?').get(mail)) {
+    return { ok: false, error: `The email "${mail}" is already in use` };
+  }
+
   const hash = await hashPassword(password);
   const id = randomUUID();
-  const displayName = name || email.split('@')[0];
-  db.prepare('INSERT INTO users (id,email,password_hash,role,name,created_at) VALUES (?,?,?,?,?,?)')
-    .run(id, email.toLowerCase().trim(), hash, role || 'clerk', displayName, new Date().toISOString());
+  const displayName = name || uname;
+  db.prepare('INSERT INTO users (id,email,username,password_hash,role,name,created_at) VALUES (?,?,?,?,?,?,?)')
+    .run(id, mail, uname, hash, role || 'clerk', displayName, new Date().toISOString());
   const token = createToken(id);
-  return { ok: true, token, user: { id, email, role, name: displayName } };
+  return { ok: true, token, user: { id, email: mail, username: uname, role, name: displayName } };
 });
 
 ipcMain.handle('auth:me', (_e, token: string) => {
   const s = sessions.get(token);
   if (!s) return { ok: false, error: 'UNAUTHORIZED' };
   const db = getDb();
-  const user = db.prepare('SELECT id,email,role,name FROM users WHERE id = ?').get(s.userId) as any;
+  const user = db.prepare('SELECT id,email,username,role,name FROM users WHERE id = ?').get(s.userId) as any;
   if (!user) return { ok: false, error: 'UNAUTHORIZED' };
-  return { ok: true, user: { ...user, name: user.name || user.email.split('@')[0] } };
+  return { ok: true, user: { ...user, name: user.name || user.username || user.email.split('@')[0] } };
 });
 
 ipcMain.handle('auth:list', () => {
   const db = getDb();
-  const users = db.prepare('SELECT id,email,role,name,created_at FROM users ORDER BY email').all();
+  const users = db.prepare('SELECT id,email,username,role,name,created_at FROM users ORDER BY email').all();
   return { ok: true, data: users };
 });
 
@@ -73,6 +104,23 @@ ipcMain.handle('auth:update', async (_e, id: string, patch: any) => {
   try {
     if (patch.name !== undefined) db.prepare('UPDATE users SET name=? WHERE id=?').run(patch.name, id);
     if (patch.role !== undefined) db.prepare('UPDATE users SET role=? WHERE id=?').run(patch.role, id);
+
+    // Both identifiers are editable. A clash is reported in plain words rather
+    // than as a constraint error, because the person reading it is a shopkeeper.
+    if (patch.username !== undefined) {
+      const uname = String(patch.username || '').trim().toLowerCase();
+      if (!uname) return { ok: false, error: 'A username is required' };
+      const taken = db.prepare('SELECT id FROM users WHERE lower(username) = ? AND id <> ?').get(uname, id);
+      if (taken) return { ok: false, error: `The username "${uname}" is already taken` };
+      db.prepare('UPDATE users SET username=? WHERE id=?').run(uname, id);
+    }
+    if (patch.email !== undefined) {
+      const mail = String(patch.email || '').trim().toLowerCase();
+      if (!mail) return { ok: false, error: 'An email is required' };
+      const taken = db.prepare('SELECT id FROM users WHERE lower(email) = ? AND id <> ?').get(mail, id);
+      if (taken) return { ok: false, error: `The email "${mail}" is already in use` };
+      db.prepare('UPDATE users SET email=? WHERE id=?').run(mail, id);
+    }
     if (patch.password && patch.password.length >= 4) {
       const hash = await hashPassword(patch.password);
       db.prepare('UPDATE users SET password_hash=? WHERE id=?').run(hash, id);

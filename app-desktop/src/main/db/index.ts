@@ -48,6 +48,24 @@ export async function ensureSchema() {
   ensureColumn(d, 'users', 'name', 'TEXT');
   d.prepare('CREATE INDEX IF NOT EXISTS idx_users_email ON users(email)').run();
 
+  /**
+   * Usernames.
+   *
+   * A shop till should not ask a cashier for an email address; they want a
+   * short name they can type with one hand. Existing accounts keep their email
+   * and gain a username taken from the part before the @, so admin@local signs
+   * in as "admin" without anyone having to migrate anything.
+   *
+   * The index is partial so older rows with no username do not collide on NULL.
+   */
+  ensureColumn(d, 'users', 'username', 'TEXT');
+  try {
+    d.prepare(`UPDATE users SET username = lower(substr(email, 1, instr(email, '@') - 1))
+               WHERE (username IS NULL OR username = '') AND instr(email, '@') > 1`).run();
+    d.prepare("UPDATE users SET username = lower(email) WHERE username IS NULL OR username = ''").run();
+    d.prepare('CREATE UNIQUE INDEX IF NOT EXISTS idx_users_username ON users(username) WHERE username IS NOT NULL').run();
+  } catch {}
+
   ensureTable(d, 'products', `CREATE TABLE IF NOT EXISTS products (
     id TEXT PRIMARY KEY, name TEXT NOT NULL, sku TEXT UNIQUE NOT NULL, price REAL NOT NULL,
     stock INTEGER NOT NULL DEFAULT 0, expiry TEXT, description TEXT, supplier TEXT,

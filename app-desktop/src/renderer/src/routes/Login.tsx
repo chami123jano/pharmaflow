@@ -4,8 +4,10 @@ import Logo from '../components/Logo';
 
 export default function Login({ onLogin }: { onLogin: (user: any, tokens: any) => void }) {
   const shop = useShop();
-  const [email, setEmail]       = useState('admin@local');
-  const [password, setPassword] = useState('admin123');
+  // Nothing is pre-filled. A till that fills in the admin password teaches it
+  // to everyone standing at the counter.
+  const [email, setEmail]       = useState('');
+  const [password, setPassword] = useState('');
   const [error, setError]       = useState('');
   const [loading, setLoading]   = useState(false);
 
@@ -42,13 +44,16 @@ export default function Login({ onLogin }: { onLogin: (user: any, tokens: any) =
 
         <form onSubmit={handleLogin} className="space-y-5">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1.5">Email Address</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1.5">Username</label>
             <input
-              type="email"
+              type="text"
+              autoComplete="username"
+              autoCapitalize="none"
+              spellCheck={false}
               value={email}
               onChange={e => setEmail(e.target.value)}
               className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900 bg-gray-50"
-              placeholder="admin@local"
+              placeholder="Your username"
               required
               autoFocus
             />

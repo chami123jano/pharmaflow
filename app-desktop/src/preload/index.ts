@@ -5,7 +5,7 @@ type IpcResult<T=any> = { ok: true; data?: T; [k: string]: any } | { ok: false; 
 const api = {
   auth: {
     login:    (email: string, password: string) => ipcRenderer.invoke('auth:login', email, password) as Promise<IpcResult>,
-    register: (email: string, password: string, role?: string, name?: string) => ipcRenderer.invoke('auth:register', email, password, role, name) as Promise<IpcResult>,
+    register: (username: string, password: string, role?: string, name?: string, email?: string) => ipcRenderer.invoke('auth:register', username, password, role, name, email) as Promise<IpcResult>,
     me:       (token: string) => ipcRenderer.invoke('auth:me', token) as Promise<IpcResult>,
     list:     () => ipcRenderer.invoke('auth:list') as Promise<IpcResult>,
     update:   (id: string, patch: any) => ipcRenderer.invoke('auth:update', id, patch) as Promise<IpcResult>,
