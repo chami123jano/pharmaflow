@@ -112,7 +112,7 @@ function AppInner() {
           <div className="flex justify-between h-16">
             {/* Logo */}
             <div className="flex items-center gap-3">
-              <Logo size={38} className="shrink-0 drop-shadow-sm" />
+              <Logo size={38} mark={shop.mark} className="shrink-0 drop-shadow-sm" />
               <span className={`text-lg font-bold tracking-tight ${darkMode ? 'text-white' : 'text-slate-900'}`}>{shop.name}</span>
             </div>
 

@@ -60,13 +60,17 @@ details**: name, address, phone, registration number, and the line printed at
 the bottom of the bill. Everything — the header, the window title, the
 receipt — follows.
 
+There are two logos — a plain cross, and a capsule curved until the gap makes
+a C. Pick one in the same screen. Left alone it uses the cross, which belongs
+to nobody.
+
 To brand the Windows program itself:
 
 ```bash
-SHOP_NAME="Your Pharmacy" npm run package
+SHOP_NAME="Your Pharmacy" LOGO=capsule npm run package
 ```
 
-Left alone it builds as PharmaFlow.
+Left alone it builds as PharmaFlow with the cross.
 
 ## Design notes
 

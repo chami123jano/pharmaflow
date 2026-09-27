@@ -7,3 +7,10 @@
  * so anyone who builds this repo unchanged gets PharmaFlow.
  */
 export const SHOP_NAME = (import.meta.env.VITE_SHOP_NAME || 'PharmaFlow').trim();
+
+/**
+ * Which mark to draw. The default is the neutral one, so an untouched copy of
+ * this repo carries nothing belonging to any particular shop.
+ */
+export const SHOP_MARK: 'capsule' | 'cross' =
+  (import.meta.env.VITE_LOGO || '').trim() === 'capsule' ? 'capsule' : 'cross';

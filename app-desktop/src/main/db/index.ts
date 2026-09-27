@@ -168,6 +168,9 @@ export async function ensureSchema() {
     // types its own details in Settings and the whole app follows.
     ['pharmacy.name','PharmaFlow'],['pharmacy.address',''],['pharmacy.phone',''],
     ['pharmacy.regno',''],['pharmacy.footer','Thank you. Get well soon.'],
+    // Which mark to draw. Blank is the neutral one, so a fresh copy of this
+    // software carries nothing belonging to any particular shop.
+    ['pharmacy.logo',''],
     ['sku_prefix','LK-'],['printer.receipt.name',''],
     // Receipts print without a dialog by default. A dialog left open is a
     // native modal that blocks the main process, which has previously stopped

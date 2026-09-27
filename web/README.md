@@ -70,7 +70,7 @@ In the dashboard, **Workers & Pages -> Create -> Import a repository**:
 | Root directory | `web` |
 | Build command | `npm run build` |
 | Deploy command | `npx wrangler deploy` |
-| Environment variables | `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`, `VITE_SHOP_NAME` |
+| Environment variables | `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`, `VITE_SHOP_NAME`, `VITE_LOGO` |
 
 The variables are read **at build time**, not run time, so changing one needs a
 rebuild rather than a restart. A missing Supabase variable fails the build on

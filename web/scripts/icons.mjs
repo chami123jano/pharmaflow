@@ -27,14 +27,35 @@ function shopName() {
   return 'PharmaFlow';
 }
 
-const NAVY = '#1d3b6e';
-const TEAL = '#17a3a3';
-const LIME = '#7cc242';
+function chosenMark() {
+  if (process.env.VITE_LOGO) return process.env.VITE_LOGO.trim();
+  try {
+    const env = readFileSync(resolve(root, '.env'), 'utf8');
+    const m = env.match(/^VITE_LOGO=(.*)$/m);
+    if (m) return m[1].trim();
+  } catch {}
+  return '';
+}
+
+const NAVY = '#12385f';
+const TEAL = '#0e9da0';
+const LIME = '#8bc53f';
 
 const CROSS = 'M25 7h14a3 3 0 0 1 3 3v12h12a3 3 0 0 1 3 3v14a3 3 0 0 1-3 3H42v12a3 3 0 0 1-3 3H25a3 3 0 0 1-3-3V42H10a3 3 0 0 1-3-3V25a3 3 0 0 1 3-3h12V10a3 3 0 0 1 3-3z';
 const TRACE = 'M4 32h17l3-10 4 19 4-13 3 4h25';
 
-const svg = (size, rounded) => `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="${size}" height="${size}">
+const capsule = (size, rounded) => `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="${size}" height="${size}">
+  <rect width="64" height="64" rx="${rounded ? 15 : 0}" fill="#ffffff"/>
+  <g fill="none" stroke-width="9.5" stroke-linecap="round">
+    <path d="M46 17.5A21 21 0 0 0 11 32" stroke="${NAVY}"/>
+    <path d="M11 32A21 21 0 0 0 46 46.5" stroke="${TEAL}"/>
+  </g>
+  <path d="M6.6 32h8.8" stroke="#ffffff" stroke-width="2.2" stroke-linecap="round"/>
+  <path d="M23 32h5.5l2.5-7.5 3.5 15 2.5-7.5H43" fill="none" stroke="${LIME}"
+        stroke-width="4.2" stroke-linejoin="round" stroke-linecap="round"/>
+</svg>`;
+
+const cross = (size, rounded) => `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="${size}" height="${size}">
   <defs><clipPath id="x"><path d="${CROSS}"/></clipPath></defs>
   <rect width="64" height="64" rx="${rounded ? 15 : 0}" fill="#ffffff"/>
   <g clip-path="url(#x)">
@@ -48,6 +69,9 @@ const svg = (size, rounded) => `<svg xmlns="http://www.w3.org/2000/svg" viewBox=
   <path d="${TRACE}" fill="none" stroke="#ffffff" stroke-width="8.5" stroke-linejoin="round" stroke-linecap="round"/>
   <path d="${TRACE}" fill="none" stroke="${LIME}" stroke-width="4" stroke-linejoin="round" stroke-linecap="round"/>
 </svg>`;
+
+const MARK = chosenMark() === 'capsule' ? 'capsule' : 'cross';
+const svg = (size, rounded) => (MARK === 'capsule' ? capsule : cross)(size, rounded);
 
 function render(size, rounded) {
   const out = new Resvg(svg(size, rounded), { fitTo: { mode: 'width', value: size } }).render();
@@ -92,4 +116,4 @@ for (const [size, file, rounded] of [
 // The SVG is what a browser tab prefers — sharp at any zoom, a fraction of the
 // size, and no separate file to keep in step.
 writeFileSync(resolve(root, 'dist', 'favicon.svg'), svg(64, 15));
-console.log(`[icons] drawn for "${shopName()}"`);
+console.log(`[icons] "${MARK}" mark, drawn for "${shopName()}"`);

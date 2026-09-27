@@ -187,21 +187,35 @@ identifies an installed program by it.
 
 The receipt lives in `renderer/src/lib/receipt.ts`, sized for a 76mm roll.
 
-**The logo is generic on purpose** — a cross, a pulse and a capsule, with no
-shop's name in it. That is what lets one mark serve the product and every
-pharmacy running it. The same geometry exists in **four** places and they must
-stay in step:
+**Two marks are shipped and a setting picks one**, for the same reason the shop
+name is a setting: one codebase serves a named pharmacy and the public release,
+and hardcoding either forks the source.
+
+- `capsule` — a capsule curved until the gap makes a C, a pulse inside it. A
+  pharmacy sign and an initial at once. Chosen by Chamindu Pharmacy.
+- `cross` — cross, pulse and capsule. **The default**, so an untouched copy of
+  this repo carries nothing belonging to any one shop.
+
+Chosen by `pharmacy.logo` in settings (desktop, with a picker in Settings →
+Shop details) and `VITE_LOGO` at build time (web). Blank or unrecognised means
+`cross`.
+
+The same geometry exists in four places and they must stay in step:
 
 | File | Why it exists separately |
 |---|---|
 | `app-desktop/src/renderer/src/components/Logo.tsx` | the till's header |
 | `web/src/components/Logo.tsx` | the site's header and login |
 | `web/scripts/icons.mjs` | rasterises PNGs — a phone home screen will not take an SVG |
-| `app-desktop/scripts/make-icon.mjs` | builds `build/icon.ico` for Windows |
+| `app-desktop/scripts/make-icon.mjs` | builds `build/icon.ico`; `LOGO=capsule` to brand it |
 
 Both icon scripts **fail the build if the mark does not draw**, because a blank
-white square looks deliberate and would otherwise ship. `make-icon.mjs` drops
-the capsule below 32px, where the detail turns to mush in a taskbar.
+white square looks deliberate and would otherwise ship. Both drop the fine
+detail below 32px, where it turns to mush in a taskbar.
+
+The capsule is drawn as **two arcs rather than one dashed path**, so the seam
+between the halves lands exactly on the left edge where a real capsule's join
+sits. A dash offset put it a few degrees out and it read as a mistake.
 
 ### The website (`web/`)
 

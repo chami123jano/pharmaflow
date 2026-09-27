@@ -9,12 +9,16 @@ import { createContext, useCallback, useContext, useEffect, useState, type React
  * without a line of code changing. That is what lets one codebase serve both
  * a named pharmacy and a public release.
  */
+export type Mark = 'capsule' | 'cross';
+
 export interface Shop {
   name: string;
   address: string;
   phone: string;
   regno: string;
   footer: string;
+  /** Which logo to draw; 'cross' is the neutral default. */
+  mark: Mark;
 }
 
 export const DEFAULT_SHOP: Shop = {
@@ -23,6 +27,7 @@ export const DEFAULT_SHOP: Shop = {
   phone: '',
   regno: '',
   footer: 'Thank you. Get well soon.',
+  mark: 'cross',
 };
 
 interface ShopState extends Shop {
@@ -46,6 +51,7 @@ export function ShopProvider({ children }: { children: ReactNode }) {
       phone: m['pharmacy.phone']?.trim() || '',
       regno: m['pharmacy.regno']?.trim() || '',
       footer: pick('pharmacy.footer', DEFAULT_SHOP.footer),
+      mark: m['pharmacy.logo']?.trim() === 'capsule' ? 'capsule' : 'cross',
     });
   }, []);
 

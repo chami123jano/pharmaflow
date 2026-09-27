@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
 import { useToast } from './Toast';
 import { ui } from '../lib/ui';
-import { useShop, DEFAULT_SHOP } from '../lib/shop';
+import { useShop, DEFAULT_SHOP, type Mark } from '../lib/shop';
+import Logo from './Logo';
 
 /**
  * Where the shop says who it is.
@@ -17,6 +18,7 @@ export default function ShopPanel({ darkMode }: { darkMode?: boolean }) {
   const shop = useShop();
 
   const [f, setF] = useState({ name: '', address: '', phone: '', regno: '', footer: '' });
+  const [mark, setMark] = useState<Mark>('cross');
   const [busy, setBusy] = useState(false);
   const [dirty, setDirty] = useState(false);
 
@@ -29,7 +31,8 @@ export default function ShopPanel({ darkMode }: { darkMode?: boolean }) {
       address: shop.address, phone: shop.phone, regno: shop.regno,
       footer: shop.footer === DEFAULT_SHOP.footer ? '' : shop.footer,
     });
-  }, [shop.name, shop.address, shop.phone, shop.regno, shop.footer, dirty]);
+    setMark(shop.mark);
+  }, [shop.name, shop.address, shop.phone, shop.regno, shop.footer, shop.mark, dirty]);
 
   const set = (k: keyof typeof f) => (e: React.ChangeEvent<HTMLInputElement>) => {
     setDirty(true);
@@ -44,6 +47,7 @@ export default function ShopPanel({ darkMode }: { darkMode?: boolean }) {
       ['pharmacy.phone', f.phone.trim()],
       ['pharmacy.regno', f.regno.trim()],
       ['pharmacy.footer', f.footer.trim()],
+      ['pharmacy.logo', mark],
     ];
     for (const [k, v] of pairs) await window.api?.settings?.set?.(k, v);
     setBusy(false);
@@ -86,12 +90,39 @@ export default function ShopPanel({ darkMode }: { darkMode?: boolean }) {
         </div>
       </div>
 
-      <div className={`${t.well} mt-4 p-3`}>
+      <div className="mt-4">
+        <label className={t.label}>Logo</label>
+        <div className="flex gap-3">
+          {(['capsule', 'cross'] as Mark[]).map((m) => (
+            <button
+              key={m}
+              type="button"
+              onClick={() => { setDirty(true); setMark(m); }}
+              className={`flex-1 flex items-center gap-3 p-3 rounded-xl border-2 transition text-left ${
+                mark === m ? 'border-blue-500 ring-2 ring-blue-500/25' : t.dark ? 'border-slate-700' : 'border-slate-200'
+              }`}
+            >
+              <Logo size={40} mark={m} className="shrink-0" />
+              <span className={`text-sm font-semibold ${t.page}`}>
+                {m === 'capsule' ? 'Capsule' : 'Cross'}
+                <span className={`block text-xs font-normal ${t.muted}`}>
+                  {m === 'capsule' ? 'Curved into a C' : 'Plain pharmacy mark'}
+                </span>
+              </span>
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div className={`${t.well} mt-4 p-3 flex items-center gap-3`}>
+        <Logo size={44} mark={mark} className="shrink-0" />
+        <div className="min-w-0">
         <p className={`text-xs ${t.faint}`}>The bill will be headed</p>
         <p className={`font-bold ${t.page}`}>{preview}</p>
         {(f.address || f.phone) && (
           <p className={`text-xs ${t.muted}`}>{[f.address, f.phone && 'Tel: ' + f.phone].filter(Boolean).join(' · ')}</p>
         )}
+        </div>
       </div>
 
       <button onClick={save} disabled={busy} className={`${t.btnPrimary} mt-4`}>
