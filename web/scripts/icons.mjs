@@ -1,10 +1,11 @@
 /**
- * Draws the app icons from the shop's name.
+ * Draws the app icons.
  *
  * The icon has to be a real PNG — a phone home screen will not take an SVG —
- * so it cannot simply be a string in the page like the header badge is. It is
- * rendered here instead of committed, because a fixed file would show the
- * wrong shop the moment someone else built this repo.
+ * so it cannot simply be a component like the header logo is. It is rendered
+ * here rather than committed so the two can never drift apart.
+ *
+ * The mark is the one in src/components/Logo.tsx. Keep the two in step.
  *
  * Rasterised with resvg rather than a browser, so it works on a build server
  * with no display.
@@ -26,77 +27,69 @@ function shopName() {
   return 'PharmaFlow';
 }
 
-/** Kept in step with src/lib/initials.ts — same rule, same result. */
-function initials(name) {
-  const cleaned = (name || '').trim();
-  if (!cleaned) return '??';
-  const words = cleaned.replace(/([a-z])([A-Z])/g, '$1 $2').split(/[\s\-_.]+/).filter(Boolean);
-  if (words.length >= 2) return (words[0][0] + words[1][0]).toUpperCase();
-  return words[0].slice(0, 2).toUpperCase();
-}
+const NAVY = '#1d3b6e';
+const TEAL = '#17a3a3';
+const LIME = '#7cc242';
 
-// Named explicitly rather than left to "sans-serif": a build server picks a
-// different default from a laptop, and the icon would quietly change shape.
-const FONTS = 'Segoe UI, DejaVu Sans, Liberation Sans, Noto Sans, Arial, Helvetica, sans-serif';
+const CROSS = 'M25 7h14a3 3 0 0 1 3 3v12h12a3 3 0 0 1 3 3v14a3 3 0 0 1-3 3H42v12a3 3 0 0 1-3 3H25a3 3 0 0 1-3-3V42H10a3 3 0 0 1-3-3V25a3 3 0 0 1 3-3h12V10a3 3 0 0 1 3-3z';
+const TRACE = 'M4 32h17l3-10 4 19 4-13 3 4h25';
 
-const svg = (text, size, rounded) => `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 ${size} ${size}">
-  <rect width="${size}" height="${size}" rx="${rounded ? Math.round(size * 0.22) : 0}" fill="#2563eb"/>
-  <text x="50%" y="50%" dy="0.35em" text-anchor="middle"
-        font-family="${FONTS}" font-size="${Math.round(size * (text.length > 2 ? 0.34 : 0.42))}"
-        font-weight="700" letter-spacing="${Math.round(size * -0.008)}" fill="#ffffff">${text}</text>
+const svg = (size, rounded) => `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="${size}" height="${size}">
+  <defs><clipPath id="x"><path d="${CROSS}"/></clipPath></defs>
+  <rect width="64" height="64" rx="${rounded ? 15 : 0}" fill="#ffffff"/>
+  <g clip-path="url(#x)">
+    <path d="${CROSS}" fill="${NAVY}"/>
+    <path d="M64 6 64 64 6 64Z" fill="${TEAL}"/>
+  </g>
+  <g transform="rotate(-45 47 17)">
+    <rect x="37" y="11" width="20" height="12" rx="6" fill="${LIME}"/>
+    <path d="M47 11v12" stroke="#ffffff" stroke-width="2.4" stroke-linecap="round"/>
+  </g>
+  <path d="${TRACE}" fill="none" stroke="#ffffff" stroke-width="8.5" stroke-linejoin="round" stroke-linecap="round"/>
+  <path d="${TRACE}" fill="none" stroke="${LIME}" stroke-width="4" stroke-linejoin="round" stroke-linecap="round"/>
 </svg>`;
 
-function render(text, size, rounded) {
-  const png = new Resvg(svg(text, size, rounded), {
-    font: { loadSystemFonts: true, defaultFontFamily: 'DejaVu Sans' },
-    fitTo: { mode: 'width', value: size },
-  }).render();
-  return { png: png.asPng(), pixels: png.pixels, width: png.width, height: png.height };
+function render(size, rounded) {
+  const out = new Resvg(svg(size, rounded), { fitTo: { mode: 'width', value: size } }).render();
+  return { png: out.asPng(), pixels: out.pixels, width: out.width, height: out.height };
 }
 
 /**
- * Fail loudly if the letters did not draw.
+ * Fail loudly if the mark did not draw.
  *
- * Without a usable font resvg renders the background and silently drops the
- * text, and the result is a blank blue square that looks deliberate. Comparing
- * the middle of the icon against its background catches that.
+ * A blank white square looks deliberate, so a silent failure here would ship.
+ * The cross sits dead centre, so the middle must not be white.
  */
-function assertTextRendered(out, label) {
+function assertMarkRendered(out, label) {
   const { pixels, width, height } = out;
-  const at = (x, y) => {
-    const i = (y * width + x) * 4;
-    return [pixels[i], pixels[i + 1], pixels[i + 2]];
-  };
-  let white = 0;
-  for (let y = Math.floor(height * 0.35); y < height * 0.65; y++) {
-    for (let x = Math.floor(width * 0.2); x < width * 0.8; x++) {
-      const [r, g, b] = at(x, y);
-      if (r > 200 && g > 200 && b > 200) white++;
+  let coloured = 0, total = 0;
+  for (let y = Math.floor(height * 0.4); y < height * 0.6; y++) {
+    for (let x = Math.floor(width * 0.4); x < width * 0.6; x++) {
+      const i = (y * width + x) * 4;
+      total++;
+      if (pixels[i] < 220 || pixels[i + 1] < 220 || pixels[i + 2] < 220) coloured++;
     }
   }
-  const area = (height * 0.3) * (width * 0.6);
-  const ratio = white / area;
-  if (ratio < 0.03) {
-    throw new Error(
-      `${label}: the letters did not render (only ${(ratio * 100).toFixed(1)}% of the centre is ink). ` +
-      `No usable font was found on this machine.`
-    );
+  const ratio = coloured / Math.max(total, 1);
+  if (ratio < 0.5) {
+    throw new Error(`${label}: the mark did not render — the centre is ${(100 - ratio * 100).toFixed(0)}% blank.`);
   }
   return ratio;
 }
-
-const name = shopName();
-const mark = initials(name);
 
 for (const [size, file, rounded] of [
   [192, 'icon-192.png', true],
   [512, 'icon-512.png', true],
   [180, 'apple-touch-icon.png', false], // iOS rounds it itself
+  [64, 'favicon.png', true],
 ]) {
-  const out = render(mark, size, rounded);
-  const ink = assertTextRendered(out, file);
+  const out = render(size, rounded);
+  const ink = assertMarkRendered(out, file);
   writeFileSync(resolve(root, 'dist', file), out.png);
-  console.log(`[icons] ${file.padEnd(22)} "${mark}"  ${(ink * 100).toFixed(0)}% ink`);
+  console.log(`[icons] ${file.padEnd(22)} ${(ink * 100).toFixed(0)}% covered`);
 }
 
-console.log(`[icons] drawn from "${name}"`);
+// The SVG is what a browser tab prefers — sharp at any zoom, a fraction of the
+// size, and no separate file to keep in step.
+writeFileSync(resolve(root, 'dist', 'favicon.svg'), svg(64, 15));
+console.log(`[icons] drawn for "${shopName()}"`);

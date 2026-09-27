@@ -187,6 +187,22 @@ identifies an installed program by it.
 
 The receipt lives in `renderer/src/lib/receipt.ts`, sized for a 76mm roll.
 
+**The logo is generic on purpose** — a cross, a pulse and a capsule, with no
+shop's name in it. That is what lets one mark serve the product and every
+pharmacy running it. The same geometry exists in **four** places and they must
+stay in step:
+
+| File | Why it exists separately |
+|---|---|
+| `app-desktop/src/renderer/src/components/Logo.tsx` | the till's header |
+| `web/src/components/Logo.tsx` | the site's header and login |
+| `web/scripts/icons.mjs` | rasterises PNGs — a phone home screen will not take an SVG |
+| `app-desktop/scripts/make-icon.mjs` | builds `build/icon.ico` for Windows |
+
+Both icon scripts **fail the build if the mark does not draw**, because a blank
+white square looks deliberate and would otherwise ship. `make-icon.mjs` drops
+the capsule below 32px, where the detail turns to mush in a taskbar.
+
 ### The website (`web/`)
 
 A separate Vite + React + Tailwind static site — no framework server, so it

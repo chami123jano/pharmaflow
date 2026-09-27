@@ -1,12 +1,26 @@
-import { useState, useEffect } from 'react';
-import { formatLKR } from '../lib/format';
+import { useState, useEffect, useMemo, type ReactNode } from 'react';
+import { formatLKR, formatLKRShort } from '../lib/format';
 
-type Stat = { label: string; value: string | number; sub?: string; color: string; bg: string; icon: string };
+type Stat = { label: string; value: string | number; sub?: string; color: string; bg: string; icon: ReactNode };
+
+
+/* Line icons, 24px grid, inheriting the card's colour. Drawn inline rather
+   than pulled from a font so nothing has to load before they appear. */
+const svg = (children: ReactNode) => (
+  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+       strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    {children}
+  </svg>
+);
+const IconBox = () => svg(<><path d="M21 8v8a2 2 0 0 1-1 1.7l-7 4a2 2 0 0 1-2 0l-7-4A2 2 0 0 1 3 16V8a2 2 0 0 1 1-1.7l7-4a2 2 0 0 1 2 0l7 4A2 2 0 0 1 21 8z"/><path d="m3.3 7 8.7 5 8.7-5M12 22V12"/></>);
+const IconAlert = () => svg(<><path d="M12 9v4M12 17h.01"/><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/></>);
+const IconReceipt = () => svg(<><path d="M4 2v20l2.5-1.5L9 22l2.5-1.5L14 22l2.5-1.5L19 22V2l-2.5 1.5L14 2l-2.5 1.5L9 2 6.5 3.5z"/><path d="M8 7h8M8 11h8M8 15h5"/></>);
+const IconClock = () => svg(<><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></>);
 
 function StatCard({ label, value, sub, color, bg, icon }: Stat) {
   return (
     <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 flex items-start gap-4 hover:shadow-md transition-shadow">
-      <div className={`w-12 h-12 rounded-xl ${bg} flex items-center justify-center text-lg font-bold ${color} shrink-0`}>{icon}</div>
+      <div className={`w-12 h-12 rounded-xl ${bg} flex items-center justify-center ${color} shrink-0`}>{icon}</div>
       <div className="flex-1 min-w-0">
         <p className="text-sm text-gray-500 font-medium">{label}</p>
         <p className={`text-2xl font-bold mt-1 ${color}`}>{value}</p>
@@ -60,7 +74,29 @@ export default function Dashboard({ user, tokens, onQuickNav, darkMode }: { user
     return () => { window.removeEventListener('ph:sale:completed', h); window.removeEventListener('ph:refresh', h); clearInterval(t); };
   }, []);
 
-  const maxTrend = Math.max(...trend.map(d => d.value), 1);
+  /**
+   * Seven columns, always.
+   *
+   * The report returns only the days that had a sale, and a flex row given one
+   * entry stretched it across the whole card — a single slab of blue that read
+   * as a bug rather than a quiet week. Padding the gaps with zeroes shows the
+   * shape of the week honestly.
+   */
+  const week = useMemo(() => {
+    const byDate = new Map(trend.map((d: any) => [String(d.date).slice(0, 10), Number(d.value) || 0]));
+    const out: { date: string; value: number }[] = [];
+    for (let i = 6; i >= 0; i--) {
+      const d = new Date();
+      d.setDate(d.getDate() - i);
+      d.setHours(0, 0, 0, 0);
+      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+      out.push({ date: key, value: byDate.get(key) ?? 0 });
+    }
+    return out;
+  }, [trend]);
+
+  const maxTrend = Math.max(...week.map((d) => d.value), 1);
+  const weekTotal = week.reduce((a, d) => a + d.value, 0);
   const dm = darkMode;
   const pageBg = dm ? 'bg-gray-900' : 'bg-gray-50';
   const cardBg = dm ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-100';
@@ -82,10 +118,10 @@ export default function Dashboard({ user, tokens, onQuickNav, darkMode }: { user
 
       {/* Stats */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatCard label="Total Products" value={stats.totalProducts ?? 0} icon="Rx" color="text-blue-600" bg="bg-blue-50" />
-        <StatCard label="Low Stock Items" value={stats.lowStock ?? 0} sub="Need reorder" icon="!" color="text-orange-600" bg="bg-orange-50" />
-        <StatCard label="Sales Today" value={formatLKR(stats.salesTotal ?? 0)} sub={`${stats.transactions ?? 0} transactions`} icon="Rs" color="text-green-600" bg="bg-green-50" />
-        <StatCard label="Expiring Soon" value={stats.nearExpiry ?? 0} sub="Within 30 days" icon="Ex" color="text-red-600" bg="bg-red-50" />
+        <StatCard label="Total Products" value={stats.totalProducts ?? 0} icon={<IconBox />} color="text-blue-600" bg="bg-blue-50" />
+        <StatCard label="Low Stock Items" value={stats.lowStock ?? 0} sub="Need reorder" icon={<IconAlert />} color="text-orange-600" bg="bg-orange-50" />
+        <StatCard label="Sales Today" value={formatLKR(stats.salesTotal ?? 0)} sub={`${stats.transactions ?? 0} transactions`} icon={<IconReceipt />} color="text-green-600" bg="bg-green-50" />
+        <StatCard label="Expiring Soon" value={stats.nearExpiry ?? 0} sub="Within 30 days" icon={<IconClock />} color="text-red-600" bg="bg-red-50" />
       </div>
 
       {/* Charts + Alerts row */}
@@ -93,20 +129,33 @@ export default function Dashboard({ user, tokens, onQuickNav, darkMode }: { user
         {/* Sales trend */}
         <div className={`lg:col-span-2 ${cardBg} border rounded-2xl p-6 shadow-sm`}>
           <h2 className={`text-base font-semibold ${textPrimary} mb-4`}>Sales Trend - Last 7 Days</h2>
-          {trend.length === 0 ? (
-            <div className={`flex items-center justify-center h-40 ${textSecondary} text-sm`}>No sales data yet. Start by adding products and making a sale.</div>
-          ) : (
-            <div className="flex items-end gap-2 h-40">
-              {trend.map((d, i) => (
-                <div key={i} className="flex-1 flex flex-col items-center gap-1">
-                  <div className="w-full bg-blue-500 rounded-t-md opacity-80 hover:opacity-100 transition-opacity"
-                    style={{ height: `${Math.max(4, (d.value / maxTrend) * 120)}px` }}
-                    title={`${d.date}: ${formatLKR(d.value)}`}
-                  />
-                  <span className={`text-xs ${textSecondary}`}>{d.date?.slice(5)}</span>
+          <div className="flex items-end gap-3 h-40">
+            {week.map((d) => {
+              const pct = (d.value / maxTrend) * 100;
+              const day = new Date(d.date + 'T00:00:00');
+              const today = d.date === week[week.length - 1].date;
+              return (
+                <div key={d.date} className="flex-1 flex flex-col items-center gap-2 h-full justify-end"
+                  title={`${day.toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'short' })} — ${formatLKR(d.value)}`}>
+                  {d.value > 0 && (
+                    <span className={`text-[10px] font-semibold ${textSecondary}`}>{formatLKRShort(d.value)}</span>
+                  )}
+                  <div className={`w-full rounded-t-lg transition-all duration-500 ${
+                    d.value === 0
+                      ? (darkMode ? 'bg-slate-700/60' : 'bg-slate-100')
+                      : today ? 'bg-blue-600' : 'bg-blue-400'
+                  }`} style={{ height: d.value === 0 ? '4px' : `${Math.max(6, pct)}%` }} />
+                  <span className={`text-[11px] ${today ? 'font-bold ' + textPrimary : textSecondary}`}>
+                    {day.toLocaleDateString('en-GB', { weekday: 'short' })}
+                  </span>
                 </div>
-              ))}
-            </div>
+              );
+            })}
+          </div>
+          {weekTotal === 0 && (
+            <p className={`text-xs mt-3 text-center ${textSecondary}`}>
+              Nothing sold in the last seven days.
+            </p>
           )}
         </div>
 
