@@ -493,11 +493,22 @@ export default function Sales({ user, tokens, darkMode }: { user: any; tokens?: 
   /* ----------------------------------------------------------------- styles */
 
   const dm = darkMode;
-  const card = `rounded-xl border shadow-sm ${dm ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'}`;
+  const card = `rounded-2xl border ${dm ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'}`;
   const tp = dm ? 'text-gray-100' : 'text-gray-900';
   const ts = dm ? 'text-gray-400' : 'text-gray-500';
-  const inp = `w-full px-4 py-3 rounded-xl border-2 focus:outline-none focus:border-blue-500 ${dm ? 'bg-gray-700 border-gray-600 text-gray-100 placeholder-gray-400' : 'bg-white border-gray-300 text-gray-900'}`;
-  const activeRing = (s: Stage) => stage === s ? (dm ? 'ring-2 ring-blue-500' : 'ring-2 ring-blue-400') : '';
+  const inp = `w-full px-4 py-3 rounded-xl border-2 focus:outline-none focus:border-blue-500 transition ${dm ? 'bg-gray-700 border-gray-600 text-gray-100 placeholder-gray-400' : 'bg-white border-gray-300 text-gray-900'}`;
+
+  /**
+   * The panel whose turn it is gets a ring and a lifted shadow; the others stay
+   * fully legible rather than dimmed. The discount has to be readable at a
+   * glance from any stage — that was the point of putting it on screen instead
+   * of behind a key.
+   */
+  const panel = (s: Stage) =>
+    `${card} transition-shadow ${stage === s
+      ? 'ring-2 ring-blue-500 shadow-lg shadow-blue-500/10'
+      : 'shadow-sm'}`;
+
   const Key = ({ k, label }: { k: string; label: string }) => (
     <span className="inline-flex items-center gap-1.5">
       <kbd className={`px-1.5 py-0.5 rounded font-mono text-[11px] font-bold ${dm ? 'bg-gray-700 text-gray-200 border border-gray-600' : 'bg-gray-100 text-gray-700 border border-gray-300'}`}>{k}</kbd>
@@ -505,27 +516,48 @@ export default function Sales({ user, tokens, darkMode }: { user: any; tokens?: 
     </span>
   );
 
+  const STAGES: Stage[] = ['items', 'billing', 'payment', 'cash'];
   const stageLabel: Record<Stage, string> = {
-    items: '1 · Items', billing: '2 · Discount', payment: '3 · Payment', cash: '4 · Cash',
+    items: 'Items', billing: 'Discount', payment: 'Payment', cash: 'Cash',
   };
+  const stageAt = STAGES.indexOf(stage);
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-      {/* LEFT */}
-      <div className="lg:col-span-2 space-y-4">
-        <div className={`${card} p-3 flex items-center gap-2 flex-wrap`}>
-          {(['items', 'billing', 'payment', 'cash'] as Stage[]).map((s) => (
-            <span key={s} className={`px-3 py-1 rounded-lg text-xs font-bold ${stage === s ? 'bg-blue-600 text-white' : dm ? 'bg-gray-700 text-gray-400' : 'bg-gray-100 text-gray-500'}`}>
-              {stageLabel[s]}
-            </span>
-          ))}
+    <div className="flex flex-col lg:flex-row gap-4 lg:h-[calc(100vh-7.5rem)]">
+      {/* ---------------------------------------------------------- LEFT --- */}
+      <div className="flex-1 min-w-0 flex flex-col gap-4">
+
+        {/* Where the sale has got to */}
+        <div className={`${card} shadow-sm px-4 py-3 flex items-center gap-2 flex-wrap`}>
+          {STAGES.map((st, i) => {
+            const passed = i < stageAt;
+            const now = i === stageAt;
+            return (
+              <div key={st} className="flex items-center gap-2">
+                <span className={`flex items-center gap-2 pl-2 pr-3 py-1.5 rounded-full text-xs font-bold transition ${
+                  now ? 'bg-blue-600 text-white shadow-sm shadow-blue-600/30'
+                  : passed ? (dm ? 'bg-emerald-900/50 text-emerald-300' : 'bg-emerald-50 text-emerald-700')
+                  : (dm ? 'bg-gray-700/60 text-gray-500' : 'bg-gray-100 text-gray-400')}`}>
+                  <span className={`w-5 h-5 rounded-full grid place-items-center text-[10px] ${
+                    now ? 'bg-white/25' : passed ? (dm ? 'bg-emerald-400/20' : 'bg-emerald-200/70') : (dm ? 'bg-gray-600' : 'bg-gray-200')}`}>
+                    {passed ? '✓' : i + 1}
+                  </span>
+                  {stageLabel[st]}
+                </span>
+                {i < STAGES.length - 1 && (
+                  <span className={`w-4 h-px ${passed ? 'bg-emerald-400' : dm ? 'bg-gray-700' : 'bg-gray-200'}`} />
+                )}
+              </div>
+            );
+          })}
           <span className="ml-auto"><Key k="Numpad +" label="next stage" /></span>
         </div>
 
-        <div className={`${card} p-4 ${activeRing('items')}`}>
+        {/* Item entry */}
+        <div className={`${panel('items')} p-4`}>
           <div className="flex items-center justify-between mb-2">
             <label className={`text-sm font-bold ${tp}`}>Item</label>
-            {cart.length > 0 && <span className="px-2 py-0.5 rounded-full bg-green-600 text-white text-xs font-bold">{cart.length} line{cart.length > 1 ? 's' : ''}</span>}
+            {cart.length > 0 && <span className="px-2 py-0.5 rounded-full bg-emerald-600 text-white text-xs font-bold">{cart.length} line{cart.length > 1 ? 's' : ''}</span>}
           </div>
           <input
             ref={searchRef} type="text" value={search}
@@ -535,7 +567,7 @@ export default function Sales({ user, tokens, darkMode }: { user: any; tokens?: 
             placeholder="Type part of the name, or scan"
             className={`${inp} text-lg`} autoComplete="off" spellCheck={false}
           />
-          <div className="flex flex-wrap gap-x-4 gap-y-1 mt-2">
+          <div className="flex flex-wrap gap-x-4 gap-y-1 mt-2.5">
             <Key k="↑ ↓" label="choose" />
             <Key k="Enter" label="add, then type qty" />
             <Key k="Numpad +" label="finish items" />
@@ -554,11 +586,11 @@ export default function Sales({ user, tokens, darkMode }: { user: any; tokens?: 
                     {p.generic_name && <span className={`ml-2 text-xs ${i === resultIdx ? 'text-blue-100' : ts}`}>{p.generic_name}</span>}
                   </div>
                   <div className="flex items-center gap-3 shrink-0">
-                    <span className={`font-bold text-sm ${i === resultIdx ? 'text-white' : 'text-green-500'}`}>{formatLKR(p.price)}</span>
+                    <span className={`font-bold text-sm ${i === resultIdx ? 'text-white' : 'text-emerald-500'}`}>{formatLKR(p.price)}</span>
                     <span className={`text-xs px-2 py-0.5 rounded-full font-semibold ${
                       Number(p.stock) <= 0 ? 'bg-red-500 text-white'
                       : Number(p.price) <= 0 ? 'bg-amber-400 text-white'
-                      : 'bg-green-100 text-green-700'}`}>
+                      : 'bg-emerald-100 text-emerald-700'}`}>
                       {Number(p.stock) <= 0 ? 'none' : Number(p.price) <= 0 ? 'no price' : p.stock}
                     </span>
                   </div>
@@ -569,9 +601,10 @@ export default function Sales({ user, tokens, darkMode }: { user: any; tokens?: 
           {search.trim() && !results.length && <p className={`mt-2 text-sm ${ts}`}>No match for "{parsed.term}".</p>}
         </div>
 
-        {/* Bill */}
-        <div className={`${card} p-4`}>
-          <div className="flex items-center justify-between mb-3 gap-3 flex-wrap">
+        {/* The bill takes whatever height is left, so a long one scrolls inside
+            its own panel instead of pushing the total off the screen. */}
+        <div className={`${card} shadow-sm flex-1 min-h-0 flex flex-col overflow-hidden`}>
+          <div className={`flex items-center justify-between gap-3 flex-wrap px-4 py-3 border-b ${dm ? 'border-gray-700' : 'border-gray-100'}`}>
             <h3 className={`text-sm font-bold ${tp}`}>Bill</h3>
             {cart.length > 0 && (
               <div className="flex flex-wrap gap-x-4 gap-y-1">
@@ -581,76 +614,99 @@ export default function Sales({ user, tokens, darkMode }: { user: any; tokens?: 
               </div>
             )}
           </div>
+
           {cart.length === 0 ? (
-            <p className={`text-sm py-8 text-center ${ts}`}>No items yet.</p>
+            <div className="flex-1 grid place-items-center px-6 py-10">
+              <div className="text-center">
+                <div className={`mx-auto w-11 h-11 rounded-2xl grid place-items-center mb-3 ${dm ? 'bg-gray-700' : 'bg-gray-100'}`}>
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"
+                       strokeLinecap="round" strokeLinejoin="round" className={ts} aria-hidden="true">
+                    <path d="M4 2v20l2.5-1.5L9 22l2.5-1.5L14 22l2.5-1.5L19 22V2l-2.5 1.5L14 2l-2.5 1.5L9 2 6.5 3.5z"/>
+                    <path d="M8 7h8M8 11h8M8 15h5"/>
+                  </svg>
+                </div>
+                <p className={`text-sm font-medium ${tp}`}>No items yet</p>
+                <p className={`text-xs mt-1 ${ts}`}>Type a name above, or scan a barcode.</p>
+              </div>
+            </div>
           ) : (
-            <table className="w-full text-sm">
-              <thead>
-                <tr className={`border-b text-xs ${dm ? 'border-gray-700 text-gray-400' : 'border-gray-100 text-gray-500'}`}>
-                  <th className="text-left pb-2">Item</th>
-                  <th className="text-center pb-2 w-24">Qty</th>
-                  <th className="text-right pb-2 w-24">Price</th>
-                  <th className="text-right pb-2 w-28">Amount</th>
-                  <th className="pb-2 w-10"></th>
-                </tr>
-              </thead>
-              <tbody>
-                {cart.map((item, idx) => (
-                  <tr key={item.product.id}
-                    onClick={() => { setLineIdx(idx); focusSearch(); }}
-                    className={`border-b cursor-pointer ${dm ? 'border-gray-700' : 'border-gray-50'} ${
-                      qtyIdx === idx || lineIdx === idx ? (dm ? 'bg-blue-900/40' : 'bg-blue-50') : ''
-                    }`}>
-                    <td className={`py-2 font-medium ${tp}`}>{item.product.name}</td>
-                    <td className="py-2 text-center">
-                      {qtyIdx === idx ? (
-                        <input
-                          ref={qtyRef} type="text" inputMode="numeric" value={qtyDraft}
-                          onChange={(e) => setQtyDraft(e.target.value.replace(/[^0-9]/g, ''))}
-                          onKeyDown={onQtyKey}
-                          onBlur={() => commitQty(false)}
-                          placeholder={String(item.qty)}
-                          className="w-20 px-2 py-1 text-center font-bold rounded-lg border-2 border-blue-500 focus:outline-none text-gray-900"
-                        />
-                      ) : (
-                        <button onClick={() => { setQtyIdx(idx); setQtyDraft(''); setTimeout(() => qtyRef.current?.focus(), 20); }}
-                          className={`w-20 py-1 rounded-lg font-bold ${dm ? 'text-gray-100 hover:bg-gray-700' : 'text-gray-900 hover:bg-gray-100'}`}>
-                          {item.qty}
-                        </button>
-                      )}
-                    </td>
-                    <td className={`py-2 text-right ${ts}`}>{formatLKR(item.unitPrice)}</td>
-                    <td className={`py-2 text-right font-bold ${tp}`}>{formatLKR(item.qty * item.unitPrice)}</td>
-                    <td className="py-2 text-right">
-                      <button onClick={(e) => { e.stopPropagation(); removeLine(idx); }}
-                        title="Remove this line"
-                        className="px-2 py-1 rounded-lg text-xs font-semibold bg-red-100 text-red-600 hover:bg-red-200">Remove</button>
-                    </td>
+            <div className="flex-1 min-h-0 overflow-y-auto">
+              <table className="w-full text-sm">
+                <thead className={`sticky top-0 z-10 ${dm ? 'bg-gray-800' : 'bg-white'}`}>
+                  <tr className={`border-b text-[11px] uppercase tracking-wide ${dm ? 'border-gray-700 text-gray-500' : 'border-gray-100 text-gray-400'}`}>
+                    <th className="text-left font-semibold px-4 py-2">Item</th>
+                    <th className="text-center font-semibold py-2 w-24">Qty</th>
+                    <th className="text-right font-semibold py-2 w-24">Price</th>
+                    <th className="text-right font-semibold py-2 w-28">Amount</th>
+                    <th className="py-2 w-24 pr-4"></th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {cart.map((item, idx) => (
+                    <tr key={item.product.id}
+                      onClick={() => { setLineIdx(idx); focusSearch(); }}
+                      className={`border-b cursor-pointer transition-colors ${dm ? 'border-gray-700/70' : 'border-gray-50'} ${
+                        qtyIdx === idx || lineIdx === idx
+                          ? (dm ? 'bg-blue-900/40' : 'bg-blue-50')
+                          : (dm ? 'hover:bg-gray-700/40' : 'hover:bg-gray-50')
+                      }`}>
+                      <td className={`px-4 py-2.5 font-medium ${tp}`}>{item.product.name}</td>
+                      <td className="py-2.5 text-center">
+                        {qtyIdx === idx ? (
+                          <input
+                            ref={qtyRef} type="text" inputMode="numeric" value={qtyDraft}
+                            onChange={(e) => setQtyDraft(e.target.value.replace(/[^0-9]/g, ''))}
+                            onKeyDown={onQtyKey}
+                            onBlur={() => commitQty(false)}
+                            placeholder={String(item.qty)}
+                            className="w-20 px-2 py-1 text-center font-bold rounded-lg border-2 border-blue-500 focus:outline-none text-gray-900"
+                          />
+                        ) : (
+                          <button onClick={() => { setQtyIdx(idx); setQtyDraft(''); setTimeout(() => qtyRef.current?.focus(), 20); }}
+                            className={`w-20 py-1 rounded-lg font-bold tabular-nums ${dm ? 'text-gray-100 hover:bg-gray-700' : 'text-gray-900 hover:bg-gray-100'}`}>
+                            {item.qty}
+                          </button>
+                        )}
+                      </td>
+                      <td className={`py-2.5 text-right tabular-nums ${ts}`}>{formatLKR(item.unitPrice)}</td>
+                      <td className={`py-2.5 text-right font-bold tabular-nums ${tp}`}>{formatLKR(item.qty * item.unitPrice)}</td>
+                      <td className="py-2.5 text-right pr-4">
+                        <button onClick={(e) => { e.stopPropagation(); removeLine(idx); }}
+                          title="Remove this line"
+                          className="px-2 py-1 rounded-lg text-xs font-semibold bg-red-100 text-red-600 hover:bg-red-200">Remove</button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           )}
         </div>
       </div>
 
-      {/* RIGHT */}
-      <div className="space-y-4">
-        <div className={`${card} p-4`}>
-          <div className={`flex justify-between text-sm ${ts}`}><span>Subtotal</span><span>{formatLKR(subtotal)}</span></div>
+      {/* --------------------------------------------------------- RIGHT --- */}
+      <div className="w-full lg:w-[390px] shrink-0 flex flex-col gap-3 lg:overflow-y-auto lg:pr-1">
+
+        {/* The total is the one number the cashier and the customer both look
+            at, so it gets the strongest block on the screen. */}
+        <div className={`rounded-2xl p-4 shadow-lg ${dm ? 'bg-gray-800 border border-gray-700' : 'bg-slate-900'}`}>
+          <div className="flex justify-between text-sm text-slate-400">
+            <span>Subtotal</span><span className="tabular-nums">{formatLKR(subtotal)}</span>
+          </div>
           {discAmt > 0 && (
-            <div className="flex justify-between text-sm text-green-600 mt-1">
-              <span>Discount {discType === 'percent' ? `(${discVal}%)` : ''}</span><span>-{formatLKR(discAmt)}</span>
+            <div className="flex justify-between text-sm text-emerald-400 mt-1">
+              <span>Discount {discType === 'percent' ? `(${discVal}%)` : ''}</span>
+              <span className="tabular-nums">−{formatLKR(discAmt)}</span>
             </div>
           )}
-          <div className={`flex justify-between items-baseline border-t pt-2 mt-2 ${dm ? 'border-gray-700' : 'border-gray-100'}`}>
-            <span className={`font-bold ${tp}`}>TOTAL</span>
-            <span className="text-3xl font-bold text-green-600">{formatLKR(total)}</span>
+          <div className="flex justify-between items-baseline border-t border-white/10 pt-3 mt-3">
+            <span className="font-bold text-slate-300 text-sm tracking-wide">TOTAL</span>
+            <span className="text-4xl font-extrabold text-emerald-400 tabular-nums leading-none">{formatLKR(total)}</span>
           </div>
         </div>
 
         {/* Discount — always visible, no shortcut needed */}
-        <div className={`rounded-xl border-2 p-4 ${activeRing('billing')} ${dm ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'}`}>
+        <div className={`${panel('billing')} p-4`}>
           <div className="flex items-center justify-between mb-2">
             <h3 className={`text-sm font-bold ${tp}`}>Discount</h3>
             <span className={`text-[11px] ${ts}`}>over {approvalLimit}% needs admin</span>
@@ -672,17 +728,17 @@ export default function Sales({ user, tokens, darkMode }: { user: any; tokens?: 
               {discountPercent.toFixed(1)}% — an admin password is needed when you continue.
             </p>
           )}
-          {approvedBy && <p className="mt-2 text-xs text-green-600 font-medium">Approved by {approvedBy}</p>}
+          {approvedBy && <p className="mt-2 text-xs text-emerald-600 font-medium">Approved by {approvedBy}</p>}
         </div>
 
         {/* Payment */}
         <div ref={payRef} tabIndex={-1} onKeyDown={onPaymentKey}
-          className={`rounded-xl border-2 p-4 outline-none ${activeRing('payment')} ${dm ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'}`}>
+          className={`${panel('payment')} p-4 outline-none`}>
           <h3 className={`text-sm font-bold mb-2 ${tp}`}>Payment</h3>
           <div className="grid grid-cols-2 gap-2">
             {(['CASH', 'CARD'] as const).map((m) => (
               <button key={m} onClick={() => { setPayMethod(m); setStage('payment'); }}
-                className={`py-3 rounded-xl text-sm font-bold border-2 ${payMethod === m ? (m === 'CASH' ? 'bg-green-600 text-white border-green-600' : 'bg-blue-600 text-white border-blue-600') : dm ? 'bg-gray-700 border-gray-600 text-gray-300' : 'bg-gray-50 border-gray-300 text-gray-700'}`}>
+                className={`py-3 rounded-xl text-sm font-bold border-2 transition ${payMethod === m ? (m === 'CASH' ? 'bg-emerald-600 text-white border-emerald-600 shadow-sm shadow-emerald-600/30' : 'bg-blue-600 text-white border-blue-600 shadow-sm shadow-blue-600/30') : dm ? 'bg-gray-700 border-gray-600 text-gray-300 hover:border-gray-500' : 'bg-gray-50 border-gray-300 text-gray-700 hover:border-gray-400'}`}>
                 {m === 'CASH' ? 'Cash' : 'Card'}
               </button>
             ))}
@@ -692,7 +748,7 @@ export default function Sales({ user, tokens, darkMode }: { user: any; tokens?: 
 
         {/* Cash received — only for cash */}
         {payMethod === 'CASH' && (
-          <div className={`rounded-xl border-2 p-4 ${activeRing('cash')} ${dm ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'}`}>
+          <div className={`${panel('cash')} p-4`}>
             <div className="flex items-center justify-between mb-2">
               <h3 className={`text-sm font-bold ${tp}`}>Cash received</h3>
               <Key k="F7" label="exact" />
@@ -700,20 +756,20 @@ export default function Sales({ user, tokens, darkMode }: { user: any; tokens?: 
             <input ref={cashRef} type="number" min={0} step="0.01" value={tender || ''}
               onChange={(e) => setTender(parseFloat(e.target.value) || 0)}
               onKeyDown={onCashKey} onFocus={() => setStage('cash')}
-              placeholder="0.00" className={`${inp} text-2xl font-bold text-right`} />
+              placeholder="0.00" className={`${inp} text-2xl font-bold text-right tabular-nums`} />
             <div className="grid grid-cols-4 gap-2 mt-2">
               {tenderSuggestions(total).map((a) => (
                 <button key={a} onClick={() => { setTender(a); setStage('cash'); setTimeout(() => cashRef.current?.focus(), 20); }}
-                  className={`py-2 text-xs rounded-lg font-bold ${dm ? 'bg-gray-700 text-gray-200' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}>{a}</button>
+                  className={`py-2 text-xs rounded-lg font-bold tabular-nums transition ${dm ? 'bg-gray-700 text-gray-200 hover:bg-gray-600' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}>{a}</button>
               ))}
             </div>
             {tender > 0 && (tender >= total ? (
-              <div className="mt-3 p-3 rounded-xl bg-green-50 border border-green-200 text-center">
-                <div className="text-xs text-gray-500">Change</div>
-                <div className="text-3xl font-bold text-green-600">{formatLKR(change)}</div>
+              <div className={`mt-3 p-3 rounded-xl text-center ${dm ? 'bg-emerald-900/30 border border-emerald-800' : 'bg-emerald-50 border border-emerald-200'}`}>
+                <div className={`text-xs ${ts}`}>Change</div>
+                <div className="text-3xl font-bold text-emerald-500 tabular-nums">{formatLKR(change)}</div>
               </div>
             ) : (
-              <div className="mt-3 p-2.5 rounded-xl bg-red-50 border border-red-200 text-center text-red-700 text-sm font-medium">
+              <div className={`mt-3 p-2.5 rounded-xl text-center text-sm font-medium ${dm ? 'bg-red-900/30 border border-red-800 text-red-300' : 'bg-red-50 border border-red-200 text-red-700'}`}>
                 Short by {formatLKR(total - tender)}
               </div>
             ))}
@@ -723,7 +779,7 @@ export default function Sales({ user, tokens, darkMode }: { user: any; tokens?: 
         <button
           onClick={() => (armed ? completeSale() : advance())}
           disabled={loading || !cart.length}
-          className={`w-full py-4 rounded-xl font-bold text-lg text-white disabled:opacity-40 shadow-lg ${armed ? 'bg-orange-500 hover:bg-orange-600 animate-pulse' : 'bg-green-600 hover:bg-green-700'}`}
+          className={`w-full py-4 rounded-2xl font-bold text-lg text-white disabled:opacity-40 disabled:shadow-none shadow-lg transition ${armed ? 'bg-orange-500 hover:bg-orange-600 shadow-orange-500/40 animate-pulse' : 'bg-emerald-600 hover:bg-emerald-700 shadow-emerald-600/30'}`}
         >
           {loading
             ? 'Saving…'
@@ -734,16 +790,16 @@ export default function Sales({ user, tokens, darkMode }: { user: any; tokens?: 
                 : 'Next  ·  Numpad +'}
         </button>
         {armed && (
-          <p className="text-center text-xs text-orange-500 font-medium -mt-2">
+          <p className="text-center text-xs text-orange-500 font-medium -mt-1">
             The bill will be printed and filed. Esc to go back.
           </p>
         )}
 
-        <div className="grid grid-cols-2 gap-2">
+        <div className="grid grid-cols-2 gap-2 pb-1">
           <button onClick={holdBill} disabled={!cart.length}
-            className={`py-2.5 rounded-xl border text-sm font-medium disabled:opacity-40 ${dm ? 'bg-gray-700 border-gray-600 text-gray-300' : 'bg-gray-50 border-gray-200 text-gray-700'}`}>Hold · F3</button>
+            className={`py-2.5 rounded-xl border text-sm font-medium disabled:opacity-40 transition ${dm ? 'bg-gray-700 border-gray-600 text-gray-300 hover:bg-gray-600' : 'bg-white border-gray-200 text-gray-700 hover:bg-gray-50'}`}>Hold · F3</button>
           <button onClick={openHeld}
-            className={`py-2.5 rounded-xl border text-sm font-medium ${dm ? 'bg-gray-700 border-gray-600 text-gray-300' : 'bg-gray-50 border-gray-200 text-gray-700'}`}>
+            className={`py-2.5 rounded-xl border text-sm font-medium transition ${dm ? 'bg-gray-700 border-gray-600 text-gray-300 hover:bg-gray-600' : 'bg-white border-gray-200 text-gray-700 hover:bg-gray-50'}`}>
             Recall · F6 {heldBills.length > 0 && <span className="ml-1 px-1.5 rounded-full bg-orange-500 text-white text-xs">{heldBills.length}</span>}
           </button>
         </div>
