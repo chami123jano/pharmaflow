@@ -133,6 +133,7 @@ async function upsert(cfg: CloudConfig, table: string, rows: any[], conflict = '
 }
 
 export interface Snapshot {
+  shop?: any;
   products: any[];
   batches: any[];
   sales: any[];
@@ -148,6 +149,23 @@ export interface Snapshot {
  * foreign keys reject them.
  */
 export async function pushSnapshot(cfg: CloudConfig, snap: Snapshot): Promise<void> {
+  /**
+   * The shop's own details first — it is what the website's login screen shows
+   * before anything else has loaded.
+   *
+   * Tolerated if the table is missing. This one arrived after the schema was
+   * first run, so a shop that has not re-run the SQL yet would otherwise have
+   * every sync fail over a cosmetic row. Sales and stock matter; a logo does
+   * not.
+   */
+  if (snap.shop) {
+    try {
+      await upsert(cfg, 'shop', [snap.shop]);
+    } catch (err: any) {
+      log.warn('[cloud] shop details not mirrored:', err?.message || err,
+               '- run the latest supabase/schema.sql to enable it');
+    }
+  }
   await upsert(cfg, 'products', snap.products);
   await upsert(cfg, 'product_batches', snap.batches);
   await upsert(cfg, 'customers', snap.customers);

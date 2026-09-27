@@ -71,10 +71,10 @@ const cross = (size, rounded) => `<svg xmlns="http://www.w3.org/2000/svg" viewBo
 </svg>`;
 
 const MARK = chosenMark() === 'capsule' ? 'capsule' : 'cross';
-const svg = (size, rounded) => (MARK === 'capsule' ? capsule : cross)(size, rounded);
+const pick = (variant) => (variant === 'capsule' ? capsule : cross);
 
-function render(size, rounded) {
-  const out = new Resvg(svg(size, rounded), { fitTo: { mode: 'width', value: size } }).render();
+function render(size, rounded, variant = MARK) {
+  const out = new Resvg(pick(variant)(size, rounded), { fitTo: { mode: 'width', value: size } }).render();
   return { png: out.asPng(), pixels: out.pixels, width: out.width, height: out.height };
 }
 
@@ -101,19 +101,36 @@ function assertMarkRendered(out, label) {
   return ratio;
 }
 
-for (const [size, file, rounded] of [
-  [192, 'icon-192.png', true],
-  [512, 'icon-512.png', true],
-  [180, 'apple-touch-icon.png', false], // iOS rounds it itself
-  [64, 'favicon.png', true],
-]) {
-  const out = render(size, rounded);
-  const ink = assertMarkRendered(out, file);
-  writeFileSync(resolve(root, 'dist', file), out.png);
-  console.log(`[icons] ${file.padEnd(22)} ${(ink * 100).toFixed(0)}% covered`);
+/**
+ * Both marks are drawn every time.
+ *
+ * The page picks its logo from the database at runtime, but a favicon is a
+ * file — so both exist and the page points at the right one. Without this, the
+ * browser tab and the home-screen icon could only follow a build variable, and
+ * would sit out of step with the till until someone remembered to set it.
+ */
+const JOBS = [
+  [192, 'icon-192', true],
+  [512, 'icon-512', true],
+  [180, 'apple-touch-icon', false], // iOS rounds it itself
+  [64, 'favicon', true],
+];
+
+for (const variant of ['cross', 'capsule']) {
+  for (const [size, base, rounded] of JOBS) {
+    const out = render(size, rounded, variant);
+    assertMarkRendered(out, `${base}-${variant}`);
+    writeFileSync(resolve(root, 'dist', `${base}-${variant}.png`), out.png);
+  }
+  writeFileSync(resolve(root, 'dist', `favicon-${variant}.svg`), pick(variant)(64, 15));
 }
 
-// The SVG is what a browser tab prefers — sharp at any zoom, a fraction of the
-// size, and no separate file to keep in step.
-writeFileSync(resolve(root, 'dist', 'favicon.svg'), svg(64, 15));
-console.log(`[icons] "${MARK}" mark, drawn for "${shopName()}"`);
+// The build's own choice also lands on the plain names, so anything that does
+// not know about variants — the manifest, an old bookmark — still works.
+for (const [size, base, rounded] of JOBS) {
+  const out = render(size, rounded, MARK);
+  writeFileSync(resolve(root, 'dist', `${base}.png`), out.png);
+}
+writeFileSync(resolve(root, 'dist', 'favicon.svg'), pick(MARK)(64, 15));
+
+console.log(`[icons] both marks drawn; "${MARK}" is the default for "${shopName()}"`);

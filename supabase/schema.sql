@@ -113,6 +113,25 @@ create table if not exists suppliers (
   created_at     timestamptz not null default now()
 );
 
+-- ------------------------------------------------------------------ shop ----
+-- The shop's own identity, mirrored from the till.
+--
+-- The website used to take its name and logo from build variables, which meant
+-- renaming the shop needed someone to remember a Cloudflare setting and
+-- redeploy. Reading it from here instead means the till is the single place it
+-- is ever typed.
+create table if not exists shop (
+  id         int primary key default 1,
+  name       text,
+  address    text,
+  phone      text,
+  regno      text,
+  footer     text,
+  logo       text,
+  updated_at timestamptz not null default now(),
+  constraint shop_is_one_row check (id = 1)
+);
+
 -- ------------------------------------------------------------ the queue -----
 -- The change log, in both directions. The desktop appends what it did; the
 -- website appends what the owner asked for. Each side applies what it has not
@@ -164,6 +183,7 @@ alter table customers       enable row level security;
 alter table suppliers       enable row level security;
 alter table sync_events     enable row level security;
 alter table app_users       enable row level security;
+alter table shop            enable row level security;
 
 -- Anyone signed in may look at stock and people.
 do $$
@@ -206,6 +226,13 @@ create policy owner_writes_suppliers on suppliers for insert with check (is_owne
 drop policy if exists owner_updates_suppliers on suppliers;
 create policy owner_updates_suppliers on suppliers for update using (is_owner()) with check (is_owner());
 
+-- The shop's name, logo and contact details are readable by anyone, signed in
+-- or not: the login screen has to show them before there is a session, and
+-- they are on the shop's signboard and every receipt anyway. Nothing here is
+-- private, and nothing but the till can write it.
+drop policy if exists shop_is_public on shop;
+create policy shop_is_public on shop for select using (true);
+
 -- Everyone may read their own role, so the website knows what to show.
 drop policy if exists read_own_role on app_users;
 create policy read_own_role on app_users for select using (user_id = auth.uid());
@@ -222,13 +249,15 @@ grant all on all tables in schema public to service_role;
 -- The website connects as a signed-in user. Every one of these is still gated
 -- by the policies above, so a grant here opens nothing on its own.
 grant select on products, product_batches, customers, suppliers, devices,
-                sales, sale_items, sync_events, app_users to authenticated;
+                sales, sale_items, sync_events, app_users, shop to authenticated;
 grant insert, update on products, customers, suppliers to authenticated;
 grant insert on sync_events to authenticated;
 
 -- anon is the key sitting in the website's source before anyone signs in.
 -- It is granted nothing: unauthenticated, that key is worth having.
 revoke all on all tables in schema public from anon;
+-- except the shop's own signboard, which the login screen needs.
+grant select on shop to anon;
 
 -- ------------------------------------------------------------------ live ----
 -- Lets the website watch sales arrive as they happen.

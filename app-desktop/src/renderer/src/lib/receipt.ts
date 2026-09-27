@@ -1,4 +1,32 @@
-import type { Shop } from './shop';
+import type { Shop, Mark } from './shop';
+
+/**
+ * The mark, in black only.
+ *
+ * A receipt printer has one colour. Sending it the navy-and-teal logo means
+ * Chromium dithers the fills into grey stipple, which on an impact head comes
+ * out as a grey smudge. Solid black shapes with white gaps print cleanly on
+ * both thermal and impact.
+ */
+function markSVG(mark: Mark): string {
+  if (mark === 'capsule') {
+    return `<svg viewBox="0 0 64 64" width="56" height="56" xmlns="http://www.w3.org/2000/svg">
+      <g fill="none" stroke="#000" stroke-width="9.5" stroke-linecap="round">
+        <path d="M46 17.5A21 21 0 0 0 11 32"/><path d="M11 32A21 21 0 0 0 46 46.5"/>
+      </g>
+      <path d="M6.6 32h8.8" stroke="#fff" stroke-width="2.6" stroke-linecap="round"/>
+      <path d="M23 32h5.5l2.5-7.5 3.5 15 2.5-7.5H43" fill="none" stroke="#000"
+            stroke-width="4.2" stroke-linejoin="round" stroke-linecap="round"/>
+    </svg>`;
+  }
+  return `<svg viewBox="0 0 64 64" width="56" height="56" xmlns="http://www.w3.org/2000/svg">
+    <path d="M25 7h14a3 3 0 0 1 3 3v12h12a3 3 0 0 1 3 3v14a3 3 0 0 1-3 3H42v12a3 3 0 0 1-3 3H25a3 3 0 0 1-3-3V42H10a3 3 0 0 1-3-3V25a3 3 0 0 1 3-3h12V10a3 3 0 0 1 3-3z" fill="#000"/>
+    <path d="M4 32h17l3-10 4 19 4-13 3 4h25" fill="none" stroke="#fff" stroke-width="9"
+          stroke-linejoin="round" stroke-linecap="round"/>
+    <path d="M4 32h17l3-10 4 19 4-13 3 4h25" fill="none" stroke="#000" stroke-width="3.4"
+          stroke-linejoin="round" stroke-linecap="round"/>
+  </svg>`;
+}
 
 /**
  * The printed bill.
@@ -24,6 +52,8 @@ export interface ReceiptOptions {
   widthMm?: number;
   /** Marks a copy so it cannot be passed off as the original. */
   reprint?: boolean;
+  /** Off for a shop that would rather not spend the paper or the time. */
+  logo?: boolean;
 }
 
 export function receiptHTML(sale: any, shop: Shop, opts: ReceiptOptions = {}): string {
@@ -88,6 +118,7 @@ export function receiptHTML(sale: any, shop: Shop, opts: ReceiptOptions = {}): s
     font-variant-numeric: tabular-nums;
     -webkit-print-color-adjust: exact;
   }
+  .mark { text-align: center; line-height: 0; margin-bottom: 1.5mm; }
   .shop { text-align: center; font-size: 15pt; font-weight: 800; letter-spacing: -0.2px; }
   .sub  { text-align: center; font-size: 8.5pt; }
   .rule { border-top: 1px solid #000; margin: 2.5mm 0; }
@@ -112,6 +143,7 @@ export function receiptHTML(sale: any, shop: Shop, opts: ReceiptOptions = {}): s
 <body>
   ${opts.reprint ? '<div class="copy">REPRINT &mdash; NOT AN ORIGINAL</div>' : ''}
 
+  ${opts.logo === false ? '' : `<div class="mark">${markSVG(shop.mark)}</div>`}
   <div class="shop">${esc(shop.name)}</div>
   ${head}
 

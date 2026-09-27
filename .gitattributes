@@ -1,0 +1,4 @@
+
+# The packaged icon is branded at build time (LOGO=capsule npm run package).
+# The committed one must stay neutral, so the public repo carries no monogram.
+app-desktop/build/icon.ico binary

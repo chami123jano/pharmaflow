@@ -28,6 +28,26 @@ function referenceRows(db: any) {
   return { products, batches, customers, suppliers };
 }
 
+/**
+ * The shop's own identity, so the website can read it instead of being told at
+ * build time. One row, always id 1.
+ */
+function shopRow(db: any) {
+  const rows = db.prepare("SELECT key, value FROM settings WHERE key LIKE 'pharmacy.%'").all() as any[];
+  const m: Record<string, string> = Object.fromEntries(rows.map((r) => [r.key, String(r.value ?? '')]));
+  const pick = (k: string) => (m['pharmacy.' + k] || '').trim() || null;
+  return {
+    id: 1,
+    name: pick('name'),
+    address: pick('address'),
+    phone: pick('phone'),
+    regno: pick('regno'),
+    footer: pick('footer'),
+    logo: pick('logo'),
+    updated_at: new Date().toISOString(),
+  };
+}
+
 /** Blank dates upset Postgres, which wants null or a real date. */
 const orNull = (v: any) => {
   const s = String(v ?? '').trim();
@@ -75,6 +95,7 @@ export function buildSnapshot(db: any, deviceId: string, salesSince: string | nu
 
   return {
     newestSale,
+    shop: shopRow(db),
     products: products.map((p) => ({
       id: p.id, name: p.name, sku: p.sku, generic_name: p.generic_name, barcode: p.barcode,
       category: p.category, price: Number(p.price || 0), stock: Number(p.stock || 0),

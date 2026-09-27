@@ -1,10 +1,11 @@
 import { useState } from 'react';
 import { useAuth } from '../lib/auth';
-import { SHOP_NAME, SHOP_MARK } from '../lib/shop';
+import { useShop } from '../lib/shop';
 import Logo from '../components/Logo';
 
 export default function Login() {
   const { signIn } = useAuth();
+  const shop = useShop();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -24,9 +25,9 @@ export default function Login() {
   return (
     <div className="mx-auto flex min-h-full max-w-sm flex-col justify-center p-6">
       <div className="mb-7 text-center">
-<Logo size={76} mark={SHOP_MARK} className="mx-auto drop-shadow-md" />
-        <h1 className="mt-4 text-2xl font-bold">{SHOP_NAME}</h1>
-        <p className="muted mt-1 text-sm">Your shop, from anywhere.</p>
+<Logo size={76} mark={shop.mark} className="mx-auto drop-shadow-md" />
+        <h1 className="mt-4 text-2xl font-bold">{shop.name}</h1>
+        <p className="muted mt-1 text-sm">{shop.address || 'Your shop, from anywhere.'}</p>
       </div>
 
       <form onSubmit={submit} className="card space-y-4 p-6">
