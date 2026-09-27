@@ -14,7 +14,7 @@
  */
 import { Resvg } from '@resvg/resvg-js';
 import { writeFileSync, mkdirSync } from 'fs';
-import { resolve, dirname } from 'path';
+import { resolve, dirname, relative } from 'path';
 import { fileURLToPath } from 'url';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
@@ -98,8 +98,16 @@ images.forEach((img, i) => {
   offset += img.png.length;
 });
 
-mkdirSync(resolve(root, 'build'), { recursive: true });
-const ico = Buffer.concat([header, entries, ...images.map((i) => i.png)]);
-writeFileSync(resolve(root, 'build/icon.ico'), ico);
+// --out lets a branded build write somewhere temporary, so build/icon.ico —
+// the one that is committed — stays neutral and never carries a shop's mark
+// into the public repo.
+const outArg = process.argv.indexOf('--out');
+const outPath = outArg > -1 && process.argv[outArg + 1]
+  ? resolve(process.argv[outArg + 1])
+  : resolve(root, 'build/icon.ico');
 
-console.log(`[icon] build/icon.ico  "${MARK}"  ${images.length} sizes (${SIZES.join(', ')})  ${(ico.length / 1024).toFixed(1)} KB`);
+mkdirSync(dirname(outPath), { recursive: true });
+const ico = Buffer.concat([header, entries, ...images.map((i) => i.png)]);
+writeFileSync(outPath, ico);
+
+console.log(`[icon] ${relative(root, outPath)}  "${MARK}"  ${images.length} sizes  ${(ico.length / 1024).toFixed(1)} KB`);

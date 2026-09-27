@@ -17,22 +17,28 @@ import { createRequire } from 'module';
 // required rather than imported.
 const { rcedit } = createRequire(import.meta.url)('rcedit');
 import { readFileSync, readdirSync, existsSync, statSync } from 'fs';
+import { execFileSync } from 'child_process';
 import { resolve, dirname, join } from 'path';
 import { fileURLToPath } from 'url';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const outDir = resolve(root, 'dist-build/win-unpacked');
-const icon = resolve(root, 'build/icon.ico');
+/**
+ * A branded icon is drawn to a temporary file rather than over build/icon.ico.
+ * That file is committed, and packaging used to overwrite it with this shop's
+ * mark — which then kept getting committed and would have shipped a monogram
+ * in the public repo.
+ */
+const icon = resolve(root, 'dist-build/.branded-icon.ico');
+execFileSync(process.execPath, [resolve(root, 'scripts/make-icon.mjs'), '--out', icon], {
+  stdio: 'inherit',
+  env: process.env,
+});
 
 if (!existsSync(outDir)) {
   console.error('[brand] nothing packaged yet — run the build first');
   process.exit(1);
 }
-if (!existsSync(icon)) {
-  console.error('[brand] build/icon.ico is missing — run scripts/make-icon.mjs');
-  process.exit(1);
-}
-
 const exe = readdirSync(outDir).find((f) => f.endsWith('.exe') && !/unins/i.test(f));
 if (!exe) {
   console.error('[brand] no .exe found in', outDir);
@@ -43,18 +49,30 @@ const target = join(outDir, exe);
 const pkg = JSON.parse(readFileSync(resolve(root, 'package.json'), 'utf8'));
 const productName = (process.env.SHOP_NAME || 'PharmaFlow').trim();
 
-await rcedit(target, {
-  icon,
-  'version-string': {
-    ProductName: productName,
-    FileDescription: productName,
-    CompanyName: productName,
-    LegalCopyright: `© ${new Date().getFullYear()} ${productName}`,
-    OriginalFilename: exe,
-  },
-  'file-version': pkg.version,
-  'product-version': pkg.version,
-});
+try {
+  await rcedit(target, {
+    icon,
+    'version-string': {
+      ProductName: productName,
+      FileDescription: productName,
+      CompanyName: productName,
+      LegalCopyright: `© ${new Date().getFullYear()} ${productName}`,
+      OriginalFilename: exe,
+    },
+    'file-version': pkg.version,
+    'product-version': pkg.version,
+  });
+} catch (err) {
+  // "Unable to commit changes" means Windows has the file open, which in
+  // practice means the app is still running from the folder being packaged.
+  const why = String(err?.stderr || err?.message || err);
+  if (/commit changes|being used by another process/i.test(why)) {
+    console.error(`[brand] cannot write to ${exe} — it is still running. Close it and run again.`);
+  } else {
+    console.error('[brand]', why.slice(0, 300));
+  }
+  process.exit(1);
+}
 
 /**
  * rcedit reports success even when it changed nothing, so check the bytes.
