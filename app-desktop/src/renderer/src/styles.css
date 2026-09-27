@@ -3,3 +3,26 @@
 @tailwind utilities;
 
 html, body, #root { height: 100%; }
+
+/*
+ * Short screens.
+ *
+ * Everything on the till has to be reachable without scrolling — a cashier
+ * with a customer waiting should never have to find a scrollbar. The panel
+ * stack needs about 670px, which a 1080p screen has plenty of and a 1366x768
+ * laptop does not. Below that the same content is drawn tighter rather than
+ * some of it being cut off.
+ */
+@media (max-height: 810px) {
+  [data-rail] { gap: 0.5rem; }
+  [data-rail] > div { padding-top: 0.5rem; padding-bottom: 0.5rem; }
+  [data-rail] [data-total] { font-size: 1.6rem; }
+  [data-rail] [data-suggest] { padding-top: 0.2rem; padding-bottom: 0.2rem; }
+  [data-rail] [data-finish] { padding-top: 0.6rem; padding-bottom: 0.6rem; }
+}
+
+@media (max-height: 730px) {
+  [data-rail] > div { padding-top: 0.4rem; padding-bottom: 0.4rem; }
+  [data-rail] [data-total] { font-size: 1.45rem; }
+  [data-rail] input { padding-top: 0.45rem; padding-bottom: 0.45rem; }
+}

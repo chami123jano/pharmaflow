@@ -685,11 +685,11 @@ export default function Sales({ user, tokens, darkMode }: { user: any; tokens?: 
       </div>
 
       {/* --------------------------------------------------------- RIGHT --- */}
-      <div className="w-full lg:w-[390px] shrink-0 flex flex-col gap-3 lg:overflow-y-auto lg:pr-1">
+      <div data-rail className="w-full lg:w-[390px] shrink-0 flex flex-col gap-2.5 lg:min-h-0">
 
         {/* The total is the one number the cashier and the customer both look
             at, so it gets the strongest block on the screen. */}
-        <div className={`rounded-2xl p-4 shadow-lg ${dm ? 'bg-gray-800 border border-gray-700' : 'bg-slate-900'}`}>
+        <div className={`rounded-2xl px-4 py-3 shadow-lg ${dm ? 'bg-gray-800 border border-gray-700' : 'bg-slate-900'}`}>
           <div className="flex justify-between text-sm text-slate-400">
             <span>Subtotal</span><span className="tabular-nums">{formatLKR(subtotal)}</span>
           </div>
@@ -699,14 +699,14 @@ export default function Sales({ user, tokens, darkMode }: { user: any; tokens?: 
               <span className="tabular-nums">−{formatLKR(discAmt)}</span>
             </div>
           )}
-          <div className="flex justify-between items-baseline border-t border-white/10 pt-3 mt-3">
+          <div className="flex justify-between items-baseline border-t border-white/10 pt-2 mt-2">
             <span className="font-bold text-slate-300 text-sm tracking-wide">TOTAL</span>
-            <span className="text-4xl font-extrabold text-emerald-400 tabular-nums leading-none">{formatLKR(total)}</span>
+            <span data-total className="text-[2rem] font-extrabold text-emerald-400 tabular-nums leading-none">{formatLKR(total)}</span>
           </div>
         </div>
 
         {/* Discount — always visible, no shortcut needed */}
-        <div className={`${panel('billing')} p-4`}>
+        <div className={`${panel('billing')} px-4 py-3`}>
           <div className="flex items-center justify-between mb-2">
             <h3 className={`text-sm font-bold ${tp}`}>Discount</h3>
             <span className={`text-[11px] ${ts}`}>over {approvalLimit}% needs admin</span>
@@ -733,22 +733,24 @@ export default function Sales({ user, tokens, darkMode }: { user: any; tokens?: 
 
         {/* Payment */}
         <div ref={payRef} tabIndex={-1} onKeyDown={onPaymentKey}
-          className={`${panel('payment')} p-4 outline-none`}>
-          <h3 className={`text-sm font-bold mb-2 ${tp}`}>Payment</h3>
+          className={`${panel('payment')} px-4 py-3 outline-none`}>
+          <div className="flex items-center justify-between mb-2">
+            <h3 className={`text-sm font-bold ${tp}`}>Payment</h3>
+            <Key k="↑ ↓" label="switch, Enter to choose" />
+          </div>
           <div className="grid grid-cols-2 gap-2">
             {(['CASH', 'CARD'] as const).map((m) => (
               <button key={m} onClick={() => { setPayMethod(m); setStage('payment'); }}
-                className={`py-3 rounded-xl text-sm font-bold border-2 transition ${payMethod === m ? (m === 'CASH' ? 'bg-emerald-600 text-white border-emerald-600 shadow-sm shadow-emerald-600/30' : 'bg-blue-600 text-white border-blue-600 shadow-sm shadow-blue-600/30') : dm ? 'bg-gray-700 border-gray-600 text-gray-300 hover:border-gray-500' : 'bg-gray-50 border-gray-300 text-gray-700 hover:border-gray-400'}`}>
+                className={`py-2.5 rounded-xl text-sm font-bold border-2 transition ${payMethod === m ? (m === 'CASH' ? 'bg-emerald-600 text-white border-emerald-600 shadow-sm shadow-emerald-600/30' : 'bg-blue-600 text-white border-blue-600 shadow-sm shadow-blue-600/30') : dm ? 'bg-gray-700 border-gray-600 text-gray-300 hover:border-gray-500' : 'bg-gray-50 border-gray-300 text-gray-700 hover:border-gray-400'}`}>
                 {m === 'CASH' ? 'Cash' : 'Card'}
               </button>
             ))}
           </div>
-          <p className="mt-2 text-center"><Key k="↑ ↓" label="switch, Enter to choose" /></p>
         </div>
 
         {/* Cash received — only for cash */}
         {payMethod === 'CASH' && (
-          <div className={`${panel('cash')} p-4`}>
+          <div className={`${panel('cash')} px-4 py-3`}>
             <div className="flex items-center justify-between mb-2">
               <h3 className={`text-sm font-bold ${tp}`}>Cash received</h3>
               <Key k="F7" label="exact" />
@@ -756,20 +758,20 @@ export default function Sales({ user, tokens, darkMode }: { user: any; tokens?: 
             <input ref={cashRef} type="number" min={0} step="0.01" value={tender || ''}
               onChange={(e) => setTender(parseFloat(e.target.value) || 0)}
               onKeyDown={onCashKey} onFocus={() => setStage('cash')}
-              placeholder="0.00" className={`${inp} text-2xl font-bold text-right tabular-nums`} />
+              placeholder="0.00" className={`${inp} py-2 text-2xl font-bold text-right tabular-nums`} />
             <div className="grid grid-cols-4 gap-2 mt-2">
               {tenderSuggestions(total).map((a) => (
-                <button key={a} onClick={() => { setTender(a); setStage('cash'); setTimeout(() => cashRef.current?.focus(), 20); }}
-                  className={`py-2 text-xs rounded-lg font-bold tabular-nums transition ${dm ? 'bg-gray-700 text-gray-200 hover:bg-gray-600' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}>{a}</button>
+                <button key={a} data-suggest onClick={() => { setTender(a); setStage('cash'); setTimeout(() => cashRef.current?.focus(), 20); }}
+                  className={`py-1.5 text-xs rounded-lg font-bold tabular-nums transition ${dm ? 'bg-gray-700 text-gray-200 hover:bg-gray-600' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}>{a}</button>
               ))}
             </div>
             {tender > 0 && (tender >= total ? (
-              <div className={`mt-3 p-3 rounded-xl text-center ${dm ? 'bg-emerald-900/30 border border-emerald-800' : 'bg-emerald-50 border border-emerald-200'}`}>
-                <div className={`text-xs ${ts}`}>Change</div>
-                <div className="text-3xl font-bold text-emerald-500 tabular-nums">{formatLKR(change)}</div>
+              <div className={`mt-2 px-3 py-2 rounded-xl flex items-baseline justify-between ${dm ? 'bg-emerald-900/30 border border-emerald-800' : 'bg-emerald-50 border border-emerald-200'}`}>
+                <span className={`text-xs font-semibold ${ts}`}>Change</span>
+                <span className="text-2xl font-bold text-emerald-500 tabular-nums">{formatLKR(change)}</span>
               </div>
             ) : (
-              <div className={`mt-3 p-2.5 rounded-xl text-center text-sm font-medium ${dm ? 'bg-red-900/30 border border-red-800 text-red-300' : 'bg-red-50 border border-red-200 text-red-700'}`}>
+              <div className={`mt-2 px-3 py-2 rounded-xl text-center text-sm font-medium ${dm ? 'bg-red-900/30 border border-red-800 text-red-300' : 'bg-red-50 border border-red-200 text-red-700'}`}>
                 Short by {formatLKR(total - tender)}
               </div>
             ))}
@@ -777,9 +779,10 @@ export default function Sales({ user, tokens, darkMode }: { user: any; tokens?: 
         )}
 
         <button
+          data-finish
           onClick={() => (armed ? completeSale() : advance())}
           disabled={loading || !cart.length}
-          className={`w-full py-4 rounded-2xl font-bold text-lg text-white disabled:opacity-40 disabled:shadow-none shadow-lg transition ${armed ? 'bg-orange-500 hover:bg-orange-600 shadow-orange-500/40 animate-pulse' : 'bg-emerald-600 hover:bg-emerald-700 shadow-emerald-600/30'}`}
+          className={`w-full py-3.5 rounded-2xl font-bold text-lg text-white disabled:opacity-40 disabled:shadow-none shadow-lg transition ${armed ? 'bg-orange-500 hover:bg-orange-600 shadow-orange-500/40 animate-pulse' : 'bg-emerald-600 hover:bg-emerald-700 shadow-emerald-600/30'}`}
         >
           {loading
             ? 'Saving…'
@@ -795,11 +798,11 @@ export default function Sales({ user, tokens, darkMode }: { user: any; tokens?: 
           </p>
         )}
 
-        <div className="grid grid-cols-2 gap-2 pb-1">
+        <div className="grid grid-cols-2 gap-2">
           <button onClick={holdBill} disabled={!cart.length}
-            className={`py-2.5 rounded-xl border text-sm font-medium disabled:opacity-40 transition ${dm ? 'bg-gray-700 border-gray-600 text-gray-300 hover:bg-gray-600' : 'bg-white border-gray-200 text-gray-700 hover:bg-gray-50'}`}>Hold · F3</button>
+            className={`py-2 rounded-xl border text-sm font-medium disabled:opacity-40 transition ${dm ? 'bg-gray-700 border-gray-600 text-gray-300 hover:bg-gray-600' : 'bg-white border-gray-200 text-gray-700 hover:bg-gray-50'}`}>Hold · F3</button>
           <button onClick={openHeld}
-            className={`py-2.5 rounded-xl border text-sm font-medium transition ${dm ? 'bg-gray-700 border-gray-600 text-gray-300 hover:bg-gray-600' : 'bg-white border-gray-200 text-gray-700 hover:bg-gray-50'}`}>
+            className={`py-2 rounded-xl border text-sm font-medium transition ${dm ? 'bg-gray-700 border-gray-600 text-gray-300 hover:bg-gray-600' : 'bg-white border-gray-200 text-gray-700 hover:bg-gray-50'}`}>
             Recall · F6 {heldBills.length > 0 && <span className="ml-1 px-1.5 rounded-full bg-orange-500 text-white text-xs">{heldBills.length}</span>}
           </button>
         </div>

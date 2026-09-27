@@ -124,9 +124,9 @@ export default function Inventory({ user, tokens, darkMode }: { user: any; token
   const tbg = dm ? 'bg-slate-800 border-slate-700' : 'bg-white border-slate-200';
 
   return (
-    <div className="space-y-4">
+    <div className="flex flex-col gap-3 lg:h-[calc(100vh-7.5rem)]">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between gap-4 flex-wrap">
         <div>
           <h1 className={`text-2xl font-bold tracking-tight ${tp}`}>Inventory</h1>
           <p className={`text-sm ${ts}`}>{products.length} products &bull; {products.filter(p=>p.stock<=0).length} out of stock</p>
@@ -148,7 +148,7 @@ export default function Inventory({ user, tokens, darkMode }: { user: any; token
       </div>
 
       {/* Filters */}
-      <div className={`${tbg} border rounded-2xl p-4 space-y-3`}>
+      <div className={`${tbg} border rounded-2xl p-3 space-y-2.5 shrink-0`}>
         <div className="flex gap-3 w-full">
           <div className="relative flex-1 min-w-0">
             <input
@@ -176,10 +176,12 @@ export default function Inventory({ user, tokens, darkMode }: { user: any; token
             <option value="out">Out of Stock</option>
           </select>
         </div>
-        <div className="flex gap-2 flex-wrap">
+        {/* One line that scrolls sideways. Wrapping put 25 categories on two
+            rows and cost the table four more products of height. */}
+        <div className="flex gap-2 overflow-x-auto pb-0.5 -mb-0.5 [scrollbar-width:thin]">
           {CATS.map(c => (
             <button key={c} onClick={() => { setCat(c); setPage(1); }}
-              className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${cat===c ? 'bg-blue-600 text-white' : dm ? 'bg-gray-700 text-gray-300 hover:bg-gray-600' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>
+              className={`px-3 py-1 rounded-full text-xs font-medium whitespace-nowrap shrink-0 transition-colors ${cat===c ? 'bg-blue-600 text-white' : dm ? 'bg-gray-700 text-gray-300 hover:bg-gray-600' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>
               {c}
             </button>
           ))}
@@ -187,34 +189,45 @@ export default function Inventory({ user, tokens, darkMode }: { user: any; token
       </div>
 
       {/* Table */}
-      <div className={`${tbg} border rounded-2xl overflow-hidden`}>
-        <div className="overflow-x-auto">
+      <div className={`${tbg} border rounded-2xl overflow-hidden flex-1 min-h-0 flex flex-col`}>
+        <div className="overflow-auto flex-1 min-h-0">
           <table className="w-full text-sm">
-            <thead className={`border-b ${dm ? 'border-gray-700 bg-gray-750' : 'border-gray-100 bg-gray-50'}`}>
+            <thead className={`sticky top-0 z-10 border-b ${dm ? 'border-gray-700 bg-gray-800' : 'border-gray-100 bg-gray-50'}`}>
               <tr>
-                {['SKU','Name','Category','Price','Stock','Status','Expiry','Actions'].map(h => (
-                  <th key={h} className={`text-left px-4 py-3 text-xs font-semibold uppercase tracking-wide ${ts}`}>{h}</th>
+                {['Name','SKU','Category','Price','Stock','Status','Expiry','Actions'].map(h => (
+                  <th key={h} className={`text-left px-4 py-2.5 text-[11px] font-semibold uppercase tracking-wide ${ts}`}>{h}</th>
                 ))}
               </tr>
             </thead>
             <tbody>
               {paged.length === 0 ? (
-                <tr><td colSpan={8} className={`text-center py-12 ${ts}`}>No products found</td></tr>
+                <tr><td colSpan={8} className="py-16">
+                  <div className="text-center">
+                    <p className={`text-sm font-medium ${tp}`}>Nothing matched</p>
+                    <p className={`text-xs mt-1 ${ts}`}>Try part of the name, the generic name, or clear the filters.</p>
+                  </div>
+                </td></tr>
               ) : paged.map((p, i) => (
                 <tr key={p.id} onClick={() => setSelected(i)}
                   className={`border-b transition-colors cursor-pointer ${dm ? 'border-gray-700' : 'border-gray-50'} ${selected===i ? 'bg-blue-50 dark:bg-blue-900/20' : dm ? 'hover:bg-gray-700' : 'hover:bg-gray-50'}`}>
-                  <td className={`px-4 py-3 font-mono text-xs ${ts}`}>{p.sku}</td>
-                  <td className={`px-4 py-3 font-medium ${tp} max-w-48 truncate`}>{p.name}</td>
-                  <td className={`px-4 py-3 text-xs ${ts}`}>{p.category || '-'}</td>
-                  <td className={`px-4 py-3 font-semibold text-green-600`}>{formatLKR(p.price)}</td>
-                  <td className={`px-4 py-3 font-bold ${tp}`}>{p.stock}</td>
-                  <td className="px-4 py-3"><Badge stock={p.stock} /></td>
-                  <td className={`px-4 py-3 text-xs ${ts}`}>{p.expiry ? p.expiry.slice(0,7) : '-'}</td>
-                  <td className="px-4 py-3">
+                  <td className={`px-4 py-2 font-medium ${tp} max-w-64 truncate`}>
+                    {p.name}
+                    {p.generic_name && <span className={`block text-[11px] font-normal truncate ${ts}`}>{p.generic_name}</span>}
+                  </td>
+                  <td className={`px-4 py-2 font-mono text-xs ${ts}`}>{p.sku || '-'}</td>
+                  <td className={`px-4 py-2 text-xs ${ts}`}>{p.category || '-'}</td>
+                  {/* A price of zero is not good news, so it is not shown in green. */}
+                  <td className={`px-4 py-2 font-semibold tabular-nums ${Number(p.price) > 0 ? 'text-emerald-600' : 'text-amber-600'}`}>
+                    {Number(p.price) > 0 ? formatLKR(p.price) : 'no price'}
+                  </td>
+                  <td className={`px-4 py-2 font-bold tabular-nums ${tp}`}>{p.stock}</td>
+                  <td className="px-4 py-2"><Badge stock={p.stock} /></td>
+                  <td className={`px-4 py-2 text-xs tabular-nums ${ts}`}>{p.expiry ? p.expiry.slice(0,7) : '-'}</td>
+                  <td className="px-4 py-2">
                     <div className="flex gap-1">
-                      <button onClick={e=>{e.stopPropagation();openEdit(p);}} className="px-2 py-1 text-xs bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 font-medium">Edit</button>
-                      <button onClick={e=>{e.stopPropagation();setRestock(p);}} className="px-2 py-1 text-xs bg-green-100 text-green-700 rounded-lg hover:bg-green-200 font-medium">Stock</button>
-                      <button onClick={e=>{e.stopPropagation();handleDelete(p);}} className="px-2 py-1 text-xs bg-red-100 text-red-700 rounded-lg hover:bg-red-200 font-medium">Del</button>
+                      <button onClick={e=>{e.stopPropagation();openEdit(p);}} className="px-2.5 py-1 text-xs bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 font-semibold">Edit</button>
+                      <button onClick={e=>{e.stopPropagation();setRestock(p);}} className="px-2.5 py-1 text-xs bg-emerald-100 text-emerald-700 rounded-lg hover:bg-emerald-200 font-semibold">Stock</button>
+                      <button onClick={e=>{e.stopPropagation();handleDelete(p);}} className="px-2.5 py-1 text-xs bg-red-100 text-red-600 rounded-lg hover:bg-red-200 font-semibold">Del</button>
                     </div>
                   </td>
                 </tr>
@@ -225,7 +238,7 @@ export default function Inventory({ user, tokens, darkMode }: { user: any; token
 
         {/* Pagination */}
         {totalPages > 1 && (
-          <div className={`flex items-center justify-between px-4 py-3 border-t ${dm ? 'border-gray-700' : 'border-gray-100'}`}>
+          <div className={`shrink-0 flex items-center justify-between px-4 py-2.5 border-t ${dm ? 'border-gray-700' : 'border-gray-100'}`}>
             <span className={`text-xs ${ts}`}>{filtered.length} products, page {page} of {totalPages}</span>
             <div className="flex gap-1">
               <button onClick={() => setPage(p => Math.max(1, p-1))} disabled={page===1} className={`px-3 py-1 text-xs rounded-lg ${dm ? 'bg-gray-700 text-gray-300 disabled:opacity-40 hover:bg-gray-600' : 'bg-gray-100 text-gray-600 disabled:opacity-40 hover:bg-gray-200'}`}>Prev</button>

@@ -52,7 +52,9 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
     <ToastCtx.Provider value={{ toast, success, error, info, warning }}>
       {children}
       {/* Toast container */}
-      <div className="fixed top-20 right-4 z-[10000] space-y-2 pointer-events-none" aria-live="polite">
+      {/* Bottom left: top right sat directly on the till's total, so every
+          "out of stock" hid the number the cashier was reading. */}
+      <div className="fixed bottom-4 left-4 z-[10000] space-y-2 pointer-events-none" aria-live="polite">
         {toasts.map(t => (
           <div
             key={t.id}

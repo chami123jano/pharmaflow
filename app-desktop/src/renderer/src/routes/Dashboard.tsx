@@ -19,7 +19,7 @@ const IconClock = () => svg(<><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 
 
 function StatCard({ label, value, sub, color, bg, icon }: Stat) {
   return (
-    <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 flex items-start gap-4 hover:shadow-md transition-shadow">
+    <div className="bg-white rounded-2xl shadow-sm border border-gray-100 px-5 py-4 flex items-start gap-4 hover:shadow-md transition-shadow">
       <div className={`w-12 h-12 rounded-xl ${bg} flex items-center justify-center ${color} shrink-0`}>{icon}</div>
       <div className="flex-1 min-w-0">
         <p className="text-sm text-gray-500 font-medium">{label}</p>
@@ -104,20 +104,24 @@ export default function Dashboard({ user, tokens, onQuickNav, darkMode }: { user
   const textSecondary = dm ? 'text-gray-400' : 'text-gray-500';
 
   return (
-    <div className={`space-y-6 ${pageBg}`}>
+    <div className={`flex flex-col gap-4 lg:h-[calc(100vh-7.5rem)] ${pageBg}`}>
       {/* Welcome banner */}
-      <div className="bg-gradient-to-r from-blue-600 to-blue-700 rounded-2xl p-6 text-white shadow-lg">
-        <h1 className="text-2xl font-bold">Welcome back, {user?.name || 'Admin'}!</h1>
-        <p className="text-blue-100 mt-1 text-sm">Here is what is happening at your pharmacy today.</p>
-        <div className="flex gap-3 mt-4">
-          <button onClick={() => onQuickNav?.('sales')} className="px-4 py-2 bg-white text-blue-600 rounded-lg text-sm font-semibold hover:bg-blue-50 transition-colors">New Sale</button>
-          <button onClick={() => onQuickNav?.('inventory')} className="px-4 py-2 bg-blue-500 text-white rounded-lg text-sm font-semibold hover:bg-blue-400 transition-colors">Add Product</button>
-          <button onClick={() => onQuickNav?.('reports')} className="px-4 py-2 bg-blue-500 text-white rounded-lg text-sm font-semibold hover:bg-blue-400 transition-colors">Reports</button>
+      {/* A greeting and three shortcuts took a sixth of the screen. Same
+          content, one row. */}
+      <div className="shrink-0 bg-gradient-to-r from-blue-600 to-blue-700 rounded-2xl px-5 py-3.5 text-white shadow-lg flex items-center justify-between gap-4 flex-wrap">
+        <div>
+          <h1 className="text-lg font-bold leading-tight">Welcome back, {user?.name || 'Admin'}</h1>
+          <p className="text-blue-100 text-xs">Here is what is happening at your pharmacy today.</p>
+        </div>
+        <div className="flex gap-2">
+          <button onClick={() => onQuickNav?.('sales')} className="px-3.5 py-2 bg-white text-blue-600 rounded-lg text-sm font-semibold hover:bg-blue-50 transition-colors">New Sale</button>
+          <button onClick={() => onQuickNav?.('inventory')} className="px-3.5 py-2 bg-blue-500 text-white rounded-lg text-sm font-semibold hover:bg-blue-400 transition-colors">Add Product</button>
+          <button onClick={() => onQuickNav?.('reports')} className="px-3.5 py-2 bg-blue-500 text-white rounded-lg text-sm font-semibold hover:bg-blue-400 transition-colors">Reports</button>
         </div>
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="shrink-0 grid grid-cols-2 lg:grid-cols-4 gap-4">
         <StatCard label="Total Products" value={stats.totalProducts ?? 0} icon={<IconBox />} color="text-blue-600" bg="bg-blue-50" />
         <StatCard label="Low Stock Items" value={stats.lowStock ?? 0} sub="Need reorder" icon={<IconAlert />} color="text-orange-600" bg="bg-orange-50" />
         <StatCard label="Sales Today" value={formatLKR(stats.salesTotal ?? 0)} sub={`${stats.transactions ?? 0} transactions`} icon={<IconReceipt />} color="text-green-600" bg="bg-green-50" />
@@ -200,16 +204,16 @@ export default function Dashboard({ user, tokens, onQuickNav, darkMode }: { user
         </div>
       </div>
 
-      {/* Recent sales */}
-      <div className={`${cardBg} border rounded-2xl p-6 shadow-sm`}>
-        <div className="flex items-center justify-between mb-4">
+      {/* Recent sales — takes the remaining height so the page never scrolls */}
+      <div className={`${cardBg} border rounded-2xl px-5 py-4 shadow-sm flex-1 min-h-0 flex flex-col`}>
+        <div className="flex items-center justify-between mb-3 shrink-0">
           <h2 className={`text-base font-semibold ${textPrimary}`}>Recent Sales</h2>
           <button onClick={() => onQuickNav?.('reports')} className="text-xs text-blue-600 hover:underline">View all</button>
         </div>
         {recent.length === 0 ? (
-          <div className={`text-center py-8 ${textSecondary} text-sm`}>No sales yet. Go to Sales to start billing.</div>
+          <div className={`flex-1 grid place-items-center ${textSecondary} text-sm`}>No sales yet. Go to Sales to start billing.</div>
         ) : (
-          <div className="overflow-x-auto">
+          <div className="overflow-auto flex-1 min-h-0">
             <table className="w-full text-sm">
               <thead>
                 <tr className={`border-b ${dm ? 'border-gray-700' : 'border-gray-100'}`}>

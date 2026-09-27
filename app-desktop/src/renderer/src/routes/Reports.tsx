@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { formatLKR } from '../lib/format';
+import { formatLKR, formatLKRShort } from '../lib/format';
 
 const RANGES = [
   { value:'today', label:'Today' },
@@ -119,27 +119,32 @@ export default function Reports({ user, tokens, darkMode }: { user: any; tokens?
       {reportType === 'sales' && !loading && (
         <>
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-            <SummaryCard label="Total Sales" value={formatLKR(summary.totalSales ?? 0)} color="text-green-600" />
-            <SummaryCard label="Transactions" value={summary.totalTransactions ?? 0} color="text-blue-600" />
-            <SummaryCard label="Avg Transaction" value={formatLKR(summary.averageTransaction ?? 0)} color="text-purple-600" />
-            <SummaryCard label="Total Discount" value={formatLKR(summary.totalDiscount ?? 0)} color="text-orange-600" />
+            {/* Takings is the figure being looked for, so it is the only one
+                in colour. Four different colours made them all shout equally. */}
+            <SummaryCard label="Total Sales" value={formatLKR(summary.totalSales ?? 0)} color="text-emerald-600" />
+            <SummaryCard label="Transactions" value={summary.totalTransactions ?? 0} color={tp} />
+            <SummaryCard label="Avg Transaction" value={formatLKR(summary.averageTransaction ?? 0)} color={tp} />
+            <SummaryCard label="Total Discount" value={formatLKR(summary.totalDiscount ?? 0)}
+              color={Number(summary.totalDiscount ?? 0) > 0 ? 'text-amber-600' : tp} />
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {/* Sales Trend */}
             <div className={card}>
               <h3 className={`text-sm font-semibold ${tp} mb-4`}>Sales Trend</h3>
+              {/* Bars are capped in width and the row is left-aligned, so a
+                  period with one day of trading draws one bar rather than a slab
+                  stretched across the whole card. */}
               {trend.length === 0 ? (
                 <div className={`flex items-center justify-center h-40 ${ts} text-sm`}>No sales in this period</div>
               ) : (
-                <div className="flex items-end gap-1 h-40">
+                <div className="flex items-end justify-start gap-2 h-40">
                   {trend.map((d, i) => (
-                    <div key={i} className="flex-1 flex flex-col items-center gap-1 group relative">
-                      <div className="absolute -top-8 left-1/2 -translate-x-1/2 bg-gray-800 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 whitespace-nowrap z-10 pointer-events-none">
-                        {formatLKR(d.value)}
-                      </div>
-                      <div className="w-full bg-blue-500 rounded-t-sm transition-all hover:bg-blue-600"
-                        style={{ height: `${Math.max(4, (d.value / maxTrend) * 120)}px` }} />
+                    <div key={i} className="flex-1 max-w-[72px] flex flex-col items-center justify-end gap-1.5 h-full group relative">
+                      <span className={`text-[10px] font-semibold ${ts}`}>{formatLKRShort(d.value)}</span>
+                      <div className="w-full bg-blue-500 rounded-t-lg transition-all hover:bg-blue-600"
+                        style={{ height: `${Math.max(4, (d.value / maxTrend) * 100)}%` }}
+                        title={`${d.date}: ${formatLKR(d.value)}`} />
                       <span className={`text-xs ${ts} truncate w-full text-center`}>{d.date?.slice(5)}</span>
                     </div>
                   ))}
