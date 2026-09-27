@@ -17,7 +17,7 @@ export default function Login({ onLogin }: { onLogin: (user: any, tokens: any) =
     try {
       const res: any = await (window as any).api?.auth?.login?.(email, password);
       if (!res?.ok) {
-        setError(res?.error === 'INVALID_CREDENTIALS' ? 'Email or password is incorrect.' : (res?.error || 'Login failed'));
+        setError(res?.error === 'INVALID_CREDENTIALS' ? 'Username or password is incorrect.' : (res?.error || 'Login failed'));
       } else {
         onLogin(res.user, { accessToken: res.token });
       }
