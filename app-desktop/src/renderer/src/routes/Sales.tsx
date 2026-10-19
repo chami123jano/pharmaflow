@@ -496,7 +496,7 @@ export default function Sales({ user, tokens, darkMode }: { user: any; tokens?: 
   const card = `rounded-2xl border ${dm ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'}`;
   const tp = dm ? 'text-gray-100' : 'text-gray-900';
   const ts = dm ? 'text-gray-400' : 'text-gray-500';
-  const inp = `w-full px-4 py-3 rounded-xl border-2 focus:outline-none focus:border-blue-500 transition ${dm ? 'bg-gray-700 border-gray-600 text-gray-100 placeholder-gray-400' : 'bg-white border-gray-300 text-gray-900'}`;
+  const inp = `w-full px-4 py-3 rounded-xl border-2 focus:outline-none focus:border-teal-600 transition ${dm ? 'bg-gray-700 border-gray-600 text-gray-100 placeholder-gray-400' : 'bg-white border-gray-300 text-gray-900'}`;
 
   /**
    * The panel whose turn it is gets a ring and a lifted shadow; the others stay
@@ -506,7 +506,7 @@ export default function Sales({ user, tokens, darkMode }: { user: any; tokens?: 
    */
   const panel = (s: Stage) =>
     `${card} transition-shadow ${stage === s
-      ? 'ring-2 ring-blue-500 shadow-lg shadow-blue-500/10'
+      ? 'ring-2 ring-teal-600 shadow-lg shadow-teal-600/10'
       : 'shadow-sm'}`;
 
   const Key = ({ k, label }: { k: string; label: string }) => (
@@ -523,7 +523,7 @@ export default function Sales({ user, tokens, darkMode }: { user: any; tokens?: 
   const stageAt = STAGES.indexOf(stage);
 
   return (
-    <div className="flex flex-col lg:flex-row gap-4 lg:h-[calc(100vh-7.5rem)]">
+    <div className="flex flex-col lg:flex-row gap-4 lg:h-[calc(100vh-2.5rem)]">
       {/* ---------------------------------------------------------- LEFT --- */}
       <div className="flex-1 min-w-0 flex flex-col gap-4">
 
@@ -535,17 +535,17 @@ export default function Sales({ user, tokens, darkMode }: { user: any; tokens?: 
             return (
               <div key={st} className="flex items-center gap-2">
                 <span className={`flex items-center gap-2 pl-2 pr-3 py-1.5 rounded-full text-xs font-bold transition ${
-                  now ? 'bg-blue-600 text-white shadow-sm shadow-blue-600/30'
-                  : passed ? (dm ? 'bg-emerald-900/50 text-emerald-300' : 'bg-emerald-50 text-emerald-700')
+                  now ? 'bg-teal-700 text-white shadow-sm shadow-teal-700/30'
+                  : passed ? (dm ? 'bg-lime-900/50 text-lime-300' : 'bg-lime-50 text-lime-800')
                   : (dm ? 'bg-gray-700/60 text-gray-500' : 'bg-gray-100 text-gray-400')}`}>
                   <span className={`w-5 h-5 rounded-full grid place-items-center text-[10px] ${
-                    now ? 'bg-white/25' : passed ? (dm ? 'bg-emerald-400/20' : 'bg-emerald-200/70') : (dm ? 'bg-gray-600' : 'bg-gray-200')}`}>
+                    now ? 'bg-white/25' : passed ? (dm ? 'bg-lime-400/20' : 'bg-lime-200/70') : (dm ? 'bg-gray-600' : 'bg-gray-200')}`}>
                     {passed ? '✓' : i + 1}
                   </span>
                   {stageLabel[st]}
                 </span>
                 {i < STAGES.length - 1 && (
-                  <span className={`w-4 h-px ${passed ? 'bg-emerald-400' : dm ? 'bg-gray-700' : 'bg-gray-200'}`} />
+                  <span className={`w-4 h-px ${passed ? 'bg-lime-400' : dm ? 'bg-gray-700' : 'bg-gray-200'}`} />
                 )}
               </div>
             );
@@ -557,7 +557,7 @@ export default function Sales({ user, tokens, darkMode }: { user: any; tokens?: 
         <div className={`${panel('items')} p-4`}>
           <div className="flex items-center justify-between mb-2">
             <label className={`text-sm font-bold ${tp}`}>Item</label>
-            {cart.length > 0 && <span className="px-2 py-0.5 rounded-full bg-emerald-600 text-white text-xs font-bold">{cart.length} line{cart.length > 1 ? 's' : ''}</span>}
+            {cart.length > 0 && <span className="px-2 py-0.5 rounded-full bg-lime-700 text-white text-xs font-bold">{cart.length} line{cart.length > 1 ? 's' : ''}</span>}
           </div>
           <input
             ref={searchRef} type="text" value={search}
@@ -580,17 +580,17 @@ export default function Sales({ user, tokens, darkMode }: { user: any; tokens?: 
             <div className={`mt-3 rounded-xl border overflow-hidden ${dm ? 'bg-gray-700 border-gray-600' : 'bg-white border-gray-200'}`}>
               {results.map((p, i) => (
                 <div key={p.id} onClick={() => addToCart(p, parsed.qty)}
-                  className={`flex items-center justify-between px-4 py-2.5 cursor-pointer border-b last:border-0 ${i === resultIdx ? 'bg-blue-600 text-white' : dm ? 'hover:bg-gray-600 border-gray-700 text-gray-200' : 'hover:bg-blue-50 border-gray-50 text-gray-800'}`}>
+                  className={`flex items-center justify-between px-4 py-2.5 cursor-pointer border-b last:border-0 ${i === resultIdx ? 'bg-teal-700 text-white' : dm ? 'hover:bg-gray-600 border-gray-700 text-gray-200' : 'hover:bg-teal-50 border-gray-50 text-gray-800'}`}>
                   <div className="min-w-0">
                     <span className="font-semibold text-sm">{p.name}</span>
-                    {p.generic_name && <span className={`ml-2 text-xs ${i === resultIdx ? 'text-blue-100' : ts}`}>{p.generic_name}</span>}
+                    {p.generic_name && <span className={`ml-2 text-xs ${i === resultIdx ? 'text-teal-100' : ts}`}>{p.generic_name}</span>}
                   </div>
                   <div className="flex items-center gap-3 shrink-0">
-                    <span className={`font-bold text-sm ${i === resultIdx ? 'text-white' : 'text-emerald-500'}`}>{formatLKR(p.price)}</span>
+                    <span className={`font-bold text-sm ${i === resultIdx ? 'text-white' : 'text-lime-600'}`}>{formatLKR(p.price)}</span>
                     <span className={`text-xs px-2 py-0.5 rounded-full font-semibold ${
                       Number(p.stock) <= 0 ? 'bg-red-500 text-white'
                       : Number(p.price) <= 0 ? 'bg-amber-400 text-white'
-                      : 'bg-emerald-100 text-emerald-700'}`}>
+                      : 'bg-lime-100 text-lime-800'}`}>
                       {Number(p.stock) <= 0 ? 'none' : Number(p.price) <= 0 ? 'no price' : p.stock}
                     </span>
                   </div>
@@ -647,7 +647,7 @@ export default function Sales({ user, tokens, darkMode }: { user: any; tokens?: 
                       onClick={() => { setLineIdx(idx); focusSearch(); }}
                       className={`border-b cursor-pointer transition-colors ${dm ? 'border-gray-700/70' : 'border-gray-50'} ${
                         qtyIdx === idx || lineIdx === idx
-                          ? (dm ? 'bg-blue-900/40' : 'bg-blue-50')
+                          ? (dm ? 'bg-teal-900/40' : 'bg-teal-50')
                           : (dm ? 'hover:bg-gray-700/40' : 'hover:bg-gray-50')
                       }`}>
                       <td className={`px-4 py-2.5 font-medium ${tp}`}>{item.product.name}</td>
@@ -659,7 +659,7 @@ export default function Sales({ user, tokens, darkMode }: { user: any; tokens?: 
                             onKeyDown={onQtyKey}
                             onBlur={() => commitQty(false)}
                             placeholder={String(item.qty)}
-                            className="w-20 px-2 py-1 text-center font-bold rounded-lg border-2 border-blue-500 focus:outline-none text-gray-900"
+                            className="w-20 px-2 py-1 text-center font-bold rounded-lg border-2 border-teal-600 focus:outline-none text-gray-900"
                           />
                         ) : (
                           <button onClick={() => { setQtyIdx(idx); setQtyDraft(''); setTimeout(() => qtyRef.current?.focus(), 20); }}
@@ -689,19 +689,19 @@ export default function Sales({ user, tokens, darkMode }: { user: any; tokens?: 
 
         {/* The total is the one number the cashier and the customer both look
             at, so it gets the strongest block on the screen. */}
-        <div className={`rounded-2xl px-4 py-3 shadow-lg ${dm ? 'bg-gray-800 border border-gray-700' : 'bg-slate-900'}`}>
-          <div className="flex justify-between text-sm text-slate-400">
+        <div className={`rounded-2xl px-4 py-3 shadow-lg ${dm ? 'bg-navy-950 border border-navy-800' : 'bg-navy-900'}`}>
+          <div className="flex justify-between text-sm text-navy-200">
             <span>Subtotal</span><span className="tabular-nums">{formatLKR(subtotal)}</span>
           </div>
           {discAmt > 0 && (
-            <div className="flex justify-between text-sm text-emerald-400 mt-1">
+            <div className="flex justify-between text-sm text-lime-300 mt-1">
               <span>Discount {discType === 'percent' ? `(${discVal}%)` : ''}</span>
               <span className="tabular-nums">−{formatLKR(discAmt)}</span>
             </div>
           )}
           <div className="flex justify-between items-baseline border-t border-white/10 pt-2 mt-2">
-            <span className="font-bold text-slate-300 text-sm tracking-wide">TOTAL</span>
-            <span data-total className="text-[2rem] font-extrabold text-emerald-400 tabular-nums leading-none">{formatLKR(total)}</span>
+            <span className="font-semibold text-navy-100 text-xs uppercase tracking-[0.12em]">Total</span>
+            <span data-total className="text-[2rem] font-bold text-lime-400 tabular-nums leading-none tracking-tight">{formatLKR(total)}</span>
           </div>
         </div>
 
@@ -728,7 +728,7 @@ export default function Sales({ user, tokens, darkMode }: { user: any; tokens?: 
               {discountPercent.toFixed(1)}% — an admin password is needed when you continue.
             </p>
           )}
-          {approvedBy && <p className="mt-2 text-xs text-emerald-600 font-medium">Approved by {approvedBy}</p>}
+          {approvedBy && <p className="mt-2 text-xs text-lime-700 font-medium">Approved by {approvedBy}</p>}
         </div>
 
         {/* Payment */}
@@ -741,7 +741,7 @@ export default function Sales({ user, tokens, darkMode }: { user: any; tokens?: 
           <div className="grid grid-cols-2 gap-2">
             {(['CASH', 'CARD'] as const).map((m) => (
               <button key={m} onClick={() => { setPayMethod(m); setStage('payment'); }}
-                className={`py-2.5 rounded-xl text-sm font-bold border-2 transition ${payMethod === m ? (m === 'CASH' ? 'bg-emerald-600 text-white border-emerald-600 shadow-sm shadow-emerald-600/30' : 'bg-blue-600 text-white border-blue-600 shadow-sm shadow-blue-600/30') : dm ? 'bg-gray-700 border-gray-600 text-gray-300 hover:border-gray-500' : 'bg-gray-50 border-gray-300 text-gray-700 hover:border-gray-400'}`}>
+                className={`py-2.5 rounded-xl text-sm font-bold border-2 transition ${payMethod === m ? (m === 'CASH' ? 'bg-lime-700 text-white border-lime-700 shadow-sm shadow-lime-700/30' : 'bg-navy-700 text-white border-navy-700 shadow-sm shadow-navy-700/30') : dm ? 'bg-gray-700 border-gray-600 text-gray-300 hover:border-gray-500' : 'bg-gray-50 border-gray-300 text-gray-700 hover:border-gray-400'}`}>
                 {m === 'CASH' ? 'Cash' : 'Card'}
               </button>
             ))}
@@ -766,9 +766,9 @@ export default function Sales({ user, tokens, darkMode }: { user: any; tokens?: 
               ))}
             </div>
             {tender > 0 && (tender >= total ? (
-              <div className={`mt-2 px-3 py-2 rounded-xl flex items-baseline justify-between ${dm ? 'bg-emerald-900/30 border border-emerald-800' : 'bg-emerald-50 border border-emerald-200'}`}>
+              <div className={`mt-2 px-3 py-2 rounded-xl flex items-baseline justify-between ${dm ? 'bg-lime-900/30 border border-lime-800' : 'bg-lime-50 border border-lime-200'}`}>
                 <span className={`text-xs font-semibold ${ts}`}>Change</span>
-                <span className="text-2xl font-bold text-emerald-500 tabular-nums">{formatLKR(change)}</span>
+                <span className="text-2xl font-bold text-lime-600 tabular-nums">{formatLKR(change)}</span>
               </div>
             ) : (
               <div className={`mt-2 px-3 py-2 rounded-xl text-center text-sm font-medium ${dm ? 'bg-red-900/30 border border-red-800 text-red-300' : 'bg-red-50 border border-red-200 text-red-700'}`}>
@@ -782,7 +782,7 @@ export default function Sales({ user, tokens, darkMode }: { user: any; tokens?: 
           data-finish
           onClick={() => (armed ? completeSale() : advance())}
           disabled={loading || !cart.length}
-          className={`w-full py-3.5 rounded-2xl font-bold text-lg text-white disabled:opacity-40 disabled:shadow-none shadow-lg transition ${armed ? 'bg-orange-500 hover:bg-orange-600 shadow-orange-500/40 animate-pulse' : 'bg-emerald-600 hover:bg-emerald-700 shadow-emerald-600/30'}`}
+          className={`w-full py-3.5 rounded-2xl font-bold text-lg text-white disabled:opacity-40 disabled:shadow-none shadow-lg transition ${armed ? 'bg-orange-500 hover:bg-orange-600 shadow-orange-500/40 animate-pulse' : 'bg-teal-700 hover:bg-teal-800 shadow-teal-700/30'}`}
         >
           {loading
             ? 'Saving…'
@@ -829,7 +829,7 @@ export default function Sales({ user, tokens, darkMode }: { user: any; tokens?: 
                 No discount (Esc)
               </button>
               <button onClick={confirmApproval} disabled={checking}
-                className="flex-1 py-2.5 rounded-xl bg-blue-600 text-white font-bold disabled:opacity-50">
+                className="flex-1 py-2.5 rounded-xl bg-teal-700 text-white font-bold disabled:opacity-50">
                 {checking ? 'Checking…' : 'Approve (Enter)'}
               </button>
             </div>
@@ -847,7 +847,7 @@ export default function Sales({ user, tokens, darkMode }: { user: any; tokens?: 
             {done.payment === 'CASH' && (
               <>
                 <div className="mt-4 text-sm text-gray-500">Change to give</div>
-                <div className="text-5xl font-bold text-green-600">{formatLKR(done.change)}</div>
+                <div className="text-5xl font-bold text-lime-700">{formatLKR(done.change)}</div>
               </>
             )}
             <p className={`mt-5 text-xs ${ts}`}>Press Esc or click to start the next bill</p>
@@ -867,10 +867,10 @@ export default function Sales({ user, tokens, darkMode }: { user: any; tokens?: 
             <div className="max-h-80 overflow-y-auto">
               {heldBills.map((b, i) => (
                 <div key={b.id} onClick={() => recallBill(b.id)}
-                  className={`flex items-center justify-between px-4 py-3 cursor-pointer border-b last:border-0 ${i === heldIdx ? 'bg-blue-600 text-white' : dm ? 'border-gray-700 text-gray-200' : 'border-gray-100 text-gray-800'}`}>
+                  className={`flex items-center justify-between px-4 py-3 cursor-pointer border-b last:border-0 ${i === heldIdx ? 'bg-teal-700 text-white' : dm ? 'border-gray-700 text-gray-200' : 'border-gray-100 text-gray-800'}`}>
                   <div>
                     <div className="font-semibold text-sm">{b.label || 'Bill'}</div>
-                    <div className={`text-xs ${i === heldIdx ? 'text-blue-100' : ts}`}>{b.item_count} line(s)</div>
+                    <div className={`text-xs ${i === heldIdx ? 'text-teal-100' : ts}`}>{b.item_count} line(s)</div>
                   </div>
                   <span className="font-bold">{formatLKR(b.total)}</span>
                 </div>

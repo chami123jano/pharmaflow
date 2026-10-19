@@ -4,6 +4,30 @@
 
 html, body, #root { height: 100%; }
 
+@layer base {
+  html {
+    font-family: theme('fontFamily.sans');
+    /* Inter's open digits and a straighter 1 read better at counter distance. */
+    font-feature-settings: 'cv11', 'ss01';
+    -webkit-font-smoothing: antialiased;
+  }
+  body { @apply bg-slate-50 text-slate-900; }
+  .dark body, body.dark { @apply bg-slate-950 text-slate-100; }
+
+  /* Money and quantities line up in columns. */
+  .tabular-nums, td, th { font-variant-numeric: tabular-nums; }
+
+  /* Thin, quiet scrollbars — the default grey bar shouted on every list. */
+  * { scrollbar-width: thin; scrollbar-color: rgb(148 163 184 / 0.5) transparent; }
+  *::-webkit-scrollbar { width: 8px; height: 8px; }
+  *::-webkit-scrollbar-thumb { background: rgb(148 163 184 / 0.45); border-radius: 8px; }
+  *::-webkit-scrollbar-thumb:hover { background: rgb(100 116 139 / 0.6); }
+  *::-webkit-scrollbar-track { background: transparent; }
+
+  /* One focus ring everywhere, in the brand teal. */
+  :focus-visible { outline: 2px solid theme('colors.teal.600'); outline-offset: 2px; }
+}
+
 /*
  * Short screens.
  *

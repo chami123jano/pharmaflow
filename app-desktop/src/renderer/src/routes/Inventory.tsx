@@ -156,7 +156,7 @@ export default function Inventory({ user, tokens, darkMode }: { user: any; token
   const tbg = dm ? 'bg-slate-800 border-slate-700' : 'bg-white border-slate-200';
 
   return (
-    <div className="flex flex-col gap-3 lg:h-[calc(100vh-7.5rem)]">
+    <div className="flex flex-col gap-3 lg:h-[calc(100vh-2.5rem)]">
       {/* Header */}
       <div className="flex items-center justify-between gap-4 flex-wrap">
         <div>

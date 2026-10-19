@@ -104,7 +104,7 @@ export default function Dashboard({ user, tokens, onQuickNav, darkMode }: { user
   const textSecondary = dm ? 'text-gray-400' : 'text-gray-500';
 
   return (
-    <div className={`flex flex-col gap-4 lg:h-[calc(100vh-7.5rem)] ${pageBg}`}>
+    <div className={`flex flex-col gap-4 lg:h-[calc(100vh-2.5rem)] ${pageBg}`}>
       {/* Welcome banner */}
       {/* A greeting and three shortcuts took a sixth of the screen. Same
           content, one row. */}
