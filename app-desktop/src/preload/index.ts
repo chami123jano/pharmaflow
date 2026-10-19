@@ -62,6 +62,12 @@ const api = {
     delete:  (id: string) => ipcRenderer.invoke('suppliers:delete', id) as Promise<IpcResult>,
     history: (id: string, limit?: number) => ipcRenderer.invoke('suppliers:history', id, limit) as Promise<IpcResult>,
   },
+  grn: {
+    create: (payload: any) => ipcRenderer.invoke('grn:create', payload) as Promise<IpcResult>,
+    list:   (opts?: { search?: string; limit?: number }) => ipcRenderer.invoke('grn:list', opts) as Promise<IpcResult>,
+    get:    (id: string) => ipcRenderer.invoke('grn:get', id) as Promise<IpcResult>,
+    void:   (id: string, userId: string, reason?: string) => ipcRenderer.invoke('grn:void', id, userId, reason) as Promise<IpcResult>,
+  },
   batches: {
     list:     (productId: string) => ipcRenderer.invoke('batches:list', productId) as Promise<IpcResult>,
     expiring: (days?: number) => ipcRenderer.invoke('batches:expiring', days) as Promise<IpcResult>,
@@ -102,6 +108,7 @@ const api = {
     printHTML:    (html: string) => ipcRenderer.invoke('util:printHTML', html) as Promise<{ ok: boolean; error?: string; message?: string }>,
     listPrinters: () => ipcRenderer.invoke('util:listPrinters') as Promise<Array<{ name:string; displayName?:string; isDefault?:boolean }>>,
     restartApp:   () => ipcRenderer.invoke('util:restartApp') as Promise<boolean>,
+    saveDocumentPDF: (html: string, filename: string, folder?: string, open?: boolean) => ipcRenderer.invoke('util:saveDocumentPDF', html, filename, folder, open) as Promise<{ ok: boolean; data?: { path: string }; error?: string; message?: string }>,
     saveReceiptPDF: (html: string, filename: string) => ipcRenderer.invoke('util:saveReceiptPDF', html, filename) as Promise<{ ok: boolean; data?: { path: string }; error?: string; message?: string }>,
   },
   dev: { dbStatus: () => ipcRenderer.invoke('dev:dbStatus') as Promise<any> },

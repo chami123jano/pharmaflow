@@ -62,8 +62,17 @@ ipcMain.handle('batches:receive', (_e, payload: {
       supplier: payload.supplier || null,
       created_by: payload.created_by || null,
     });
-    if (payload.supplier_id) {
-      try { db.prepare('UPDATE product_batches SET supplier_id = ? WHERE id = ?').run(payload.supplier_id, batch.id); } catch {}
+    // The Stock box sends the supplier as typed text. Linking it to the
+    // supplier of that name is what makes the delivery appear in their
+    // history under People — before, that history only ever came up empty.
+    let supplierId = payload.supplier_id || null;
+    if (!supplierId && payload.supplier?.trim()) {
+      try {
+        supplierId = (db.prepare('SELECT id FROM suppliers WHERE lower(trim(name)) = lower(?)').get(payload.supplier.trim()) as any)?.id || null;
+      } catch {}
+    }
+    if (supplierId) {
+      try { db.prepare('UPDATE product_batches SET supplier_id = ? WHERE id = ?').run(supplierId, batch.id); } catch {}
     }
     const now = new Date().toISOString();
     const movementId = randomUUID();

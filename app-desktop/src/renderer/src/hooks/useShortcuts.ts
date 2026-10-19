@@ -65,6 +65,7 @@ export const GLOBAL_SHORTCUTS: Omit<ShortcutDef, 'action'>[] = [
   { key:'D', ctrl:true, description:'Go to Dashboard',    group:'Navigation' },
   { key:'I', ctrl:true, description:'Go to Inventory',    group:'Navigation' },
   { key:'S', ctrl:true, description:'Go to Sales / POS',  group:'Navigation' },
+  { key:'G', ctrl:true, description:'Receive stock (GRN)', group:'Navigation' },
   { key:'R', ctrl:true, description:'Go to Reports',      group:'Navigation' },
   { key:'U', ctrl:true, description:'Go to Users',        group:'Navigation' },
   { key:',', ctrl:true, description:'Go to Settings',     group:'Navigation' },

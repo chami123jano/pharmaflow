@@ -8,7 +8,7 @@ import type { Shop, Mark } from './shop';
  * out as a grey smudge. Solid black shapes with white gaps print cleanly on
  * both thermal and impact.
  */
-function markSVG(mark: Mark): string {
+export function markSVG(mark: Mark): string {
   if (mark === 'capsule') {
     return `<svg viewBox="0 0 64 64" width="56" height="56" xmlns="http://www.w3.org/2000/svg">
       <g fill="none" stroke="#000" stroke-width="9.5" stroke-linecap="round">
@@ -42,7 +42,7 @@ function markSVG(mark: Mark): string {
  * barely manages grey.
  */
 
-const esc = (s: unknown) =>
+export const esc = (s: unknown) =>
   String(s ?? '')
     .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;');

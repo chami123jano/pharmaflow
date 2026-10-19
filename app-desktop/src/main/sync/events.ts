@@ -19,7 +19,7 @@ import log from '../log.js';
 import { recomputeStock } from '../db/batches.js';
 import { skuForIncoming } from '../db/sku.js';
 
-export type EventType = 'product.upsert' | 'product.delete' | 'stock.delta' | 'sale.created';
+export type EventType = 'product.upsert' | 'product.delete' | 'stock.delta' | 'sale.created' | 'grn.created' | 'grn.voided';
 
 export interface SyncEvent {
   id: string;
@@ -207,6 +207,43 @@ export function applyEvent(ev: SyncEvent): string | null {
         db.prepare('INSERT OR IGNORE INTO sale_items (id,sale_id,product_id,quantity,unit_price,line_total) VALUES (?,?,?,?,?,?)')
           .run(it.id || randomUUID(), p.id, it.product_id, it.quantity, it.unit_price, it.line_total);
       }
+      break;
+    }
+
+    case 'grn.created': {
+      // The paperwork for a delivery. Its stock already arrived as stock.delta
+      // events, recorded just before this one; here the batches those created
+      // learn their cost, supplier and which note they belong to. Supplier ids
+      // are local to each machine, so only the name is relied on.
+      if (!p.id) break;
+      const exists = db.prepare('SELECT 1 AS x FROM grns WHERE id = ?').get(p.id);
+      if (exists) break;
+      const local = p.supplier_name
+        ? (db.prepare('SELECT id FROM suppliers WHERE lower(trim(name)) = lower(?)').get(String(p.supplier_name).trim()) as any)?.id || null
+        : null;
+      db.prepare(`INSERT INTO grns (id,grn_no,supplier_id,supplier_name,invoice_no,invoice_date,invoice_total,total_cost,line_count,unit_count,notes,created_by,created_by_name,device,created_at,voided_at)
+                  VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`)
+        .run(p.id, p.grn_no ?? null, local, p.supplier_name ?? null, p.invoice_no ?? null, p.invoice_date ?? null,
+             p.invoice_total ?? null, p.total_cost ?? 0, p.line_count ?? 0, p.unit_count ?? 0, p.notes ?? null,
+             null, p.created_by_name ?? null, p.device || ev.device, p.created_at || ev.ts, p.voided_at ?? null);
+      for (const it of p.items || []) {
+        db.prepare(`INSERT OR IGNORE INTO grn_items (id,grn_id,product_id,product_name,batch_id,batch_no,expiry,qty,free_qty,cost_price,line_total)
+                    VALUES (?,?,?,?,?,?,?,?,?,?,?)`)
+          .run(it.id || randomUUID(), p.id, it.product_id, it.product_name ?? null, it.batch_id ?? null, it.batch_no ?? null,
+               it.expiry ?? null, it.qty ?? 0, it.free_qty ?? 0, it.cost_price ?? null, it.line_total ?? 0);
+        if (it.batch_id) {
+          db.prepare('UPDATE product_batches SET grn_id = ?, supplier = COALESCE(?, supplier), supplier_id = COALESCE(?, supplier_id), cost_price = COALESCE(?, cost_price) WHERE id = ?')
+            .run(p.id, p.supplier_name ?? null, local, it.batch_cost ?? null, it.batch_id);
+        }
+      }
+      break;
+    }
+
+    case 'grn.voided': {
+      // Stock came back off the shelf through its own deltas; this only marks the note.
+      if (!p.id) break;
+      db.prepare('UPDATE grns SET voided_at = COALESCE(voided_at, ?), void_reason = COALESCE(void_reason, ?) WHERE id = ?')
+        .run(p.voided_at || ev.ts, p.void_reason ?? null, p.id);
       break;
     }
   }

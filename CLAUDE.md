@@ -88,6 +88,31 @@ when the split cannot.
 Existing stock is migrated once into a single `OPENING` batch, guarded by the
 `batches.migrated` setting.
 
+### Goods received notes (`ipc/grn.ts`, `routes/Receive.tsx`)
+
+A GRN is one supplier delivery: header in `grns`, lines in `grn_items`. **Every
+line is also an ordinary batch** made by `receiveBatch()` with `grn_id` set, so
+selling, FEFO and expiry never need to know GRNs exist. Do not give GRN stock
+its own path.
+
+- `grn:create` saves the whole note in **one transaction** — all lines on the
+  shelf or none. Sync events are recorded only after commit: one `stock.delta`
+  per line (stock still travels as deltas), then `grn.created` with the
+  paperwork, which on the other machine fills in cost, supplier and `grn_id` on
+  the batches those deltas created.
+- Free goods (`free_qty`) go on the shelf but are not paid for, so the batch
+  `cost_price` is the line total spread over qty + free.
+- `grn_no` counts per device, like receipt numbers; `id` is what is unique.
+- A repeated invoice number from the same supplier is refused unless
+  `allow_duplicate_invoice` — receiving the same invoice twice doubles stock.
+- `grn:void` is admin only (role read from the database) and only while every
+  unit is still on the shelf; it takes the stock back off as negative deltas.
+- The unsaved note lives in `localStorage.grnDraft`, so leaving the page to
+  serve a customer loses nothing. Save is Ctrl+Enter — Ctrl+S is "go to Sales".
+- Printed as A4 PDF (`util:saveDocumentPDF`, filed under
+  Documents/PharmaFlow/GRNs) or on the receipt roll (`printHTML`), from
+  `lib/grnDoc.ts`.
+
 ### Sync between two machines (`src/main/sync/`)
 
 Shop and home each run the full app offline; neither is authoritative. Each
@@ -259,6 +284,7 @@ sale_items   (id, sale_id→sales, product_id→products, quantity, unit_price, 
 settings     (key PK, value)
 ```
 
+`grns` and `grn_items` hold goods received notes; `product_batches` has `grn_id`.
 `products` also has `generic_name` and `barcode`; `sales` has `voided_at`,
 `voided_by`, `void_reason`; `sale_items` has `batch_id`. Newer tables:
 `product_batches` (one row per delivery), `held_sales` (parked bills),

@@ -142,6 +142,26 @@ export async function ensureSchema() {
   // Allocation reads batches in expiry order, so that is the index that matters.
   d.prepare('CREATE INDEX IF NOT EXISTS idx_batches_expiry  ON product_batches(expiry)').run();
 
+  // Goods received notes. One per delivery: the supplier's invoice, and every
+  // line that came in on it. Each line is also an ordinary batch (grn_id set),
+  // so selling, expiry and sync carry on knowing nothing about GRNs.
+  // grn_no counts per device, like receipt numbers; the id is what is unique.
+  ensureTable(d, 'grns', `CREATE TABLE IF NOT EXISTS grns (
+    id TEXT PRIMARY KEY, grn_no INTEGER, supplier_id TEXT, supplier_name TEXT,
+    invoice_no TEXT, invoice_date TEXT, invoice_total REAL, total_cost REAL NOT NULL DEFAULT 0,
+    line_count INTEGER NOT NULL DEFAULT 0, unit_count INTEGER NOT NULL DEFAULT 0,
+    notes TEXT, created_by TEXT, created_by_name TEXT, device TEXT, created_at TEXT NOT NULL,
+    voided_at TEXT, voided_by TEXT, void_reason TEXT)`);
+  d.prepare('CREATE INDEX IF NOT EXISTS idx_grns_created  ON grns(created_at)').run();
+  d.prepare('CREATE INDEX IF NOT EXISTS idx_grns_supplier ON grns(supplier_id)').run();
+  ensureTable(d, 'grn_items', `CREATE TABLE IF NOT EXISTS grn_items (
+    id TEXT PRIMARY KEY, grn_id TEXT NOT NULL, product_id TEXT NOT NULL, product_name TEXT,
+    batch_id TEXT, batch_no TEXT, expiry TEXT, qty INTEGER NOT NULL, free_qty INTEGER NOT NULL DEFAULT 0,
+    cost_price REAL, line_total REAL NOT NULL DEFAULT 0,
+    FOREIGN KEY (grn_id) REFERENCES grns(id) ON DELETE CASCADE)`);
+  d.prepare('CREATE INDEX IF NOT EXISTS idx_grn_items_grn ON grn_items(grn_id)').run();
+  ensureColumn(d, 'product_batches', 'grn_id', 'TEXT');
+
   // Which batch each sold line came out of, for recalls and for putting the
   // right quantity back when a sale is voided.
   ensureColumn(d, 'sale_items', 'batch_id', 'TEXT');

@@ -26,6 +26,7 @@ import './ipc/settings.js';
 import './ipc/admin.js';
 import './ipc/pos.js';
 import './ipc/batches.js';
+import './ipc/grn.js';
 import './ipc/contacts.js';
 import './ipc/sync.js';
 import { getDeviceId } from './sync/events.js';
@@ -465,6 +466,41 @@ ipcMain.handle('util:saveReceiptPDF', async (_e, html: string, filename: string)
     try { if (win) { win.destroy(); printWindows.delete(win); } } catch {}
     log.error('[Receipt] could not save PDF', err?.message || err);
     return { ok: false, error: 'SAVE_FAILED', message: err?.message || 'Could not save the receipt copy.' };
+  }
+});
+
+/**
+ * Saves a full-page document (a GRN) as an A4 PDF and opens it.
+ *
+ * Kept apart from saveReceiptPDF, which sizes the page to a till roll. Filed
+ * beside the receipts, under Documents/PharmaFlow/<folder>/YYYY-MM.
+ */
+ipcMain.handle('util:saveDocumentPDF', async (_e, html: string, filename: string, folderName = 'Documents', open = true) => {
+  let win: InstanceType<typeof BrowserWindow> | null = null;
+  try {
+    const sub = String(folderName || 'Documents').replace(/[^A-Za-z0-9 _-]/g, '_');
+    const dir = path.join(app.getPath('documents'), 'PharmaFlow', sub, new Date().toISOString().slice(0, 7));
+    fs.mkdirSync(dir, { recursive: true });
+    const safe = String(filename || 'document').replace(/[^A-Za-z0-9._-]/g, '_');
+    const file = path.join(dir, safe.endsWith('.pdf') ? safe : safe + '.pdf');
+
+    win = new BrowserWindow({ show: false, webPreferences: { contextIsolation: true, sandbox: true } });
+    printWindows.add(win);
+    await win.loadURL('data:text/html;charset=utf-8,' + encodeURIComponent(html || ''));
+    const pdf = await win.webContents.printToPDF({
+      pageSize: 'A4',
+      margins: { top: 0.5, bottom: 0.5, left: 0.5, right: 0.5 },
+      printBackground: true,
+    });
+    fs.writeFileSync(file, pdf);
+    win.destroy(); printWindows.delete(win);
+    if (open) { try { await shell.openPath(file); } catch {} }
+    log.info('[Document] saved', file);
+    return { ok: true, data: { path: file } };
+  } catch (err: any) {
+    try { if (win) { win.destroy(); printWindows.delete(win); } } catch {}
+    log.error('[Document] could not save PDF', err?.message || err);
+    return { ok: false, error: 'SAVE_FAILED', message: err?.message || 'Could not save the PDF.' };
   }
 });
 
