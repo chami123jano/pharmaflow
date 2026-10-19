@@ -109,17 +109,22 @@ ipcMain.handle('sales:create', (_e, payload: {
       applyAllocation(db, plan);
 
       for (const a of plan) {
+        // The cost of the exact delivery these units came out of; failing
+        // that, the item's own cost price; failing that, unknown (NULL) — never
+        // zero, which would report the whole sale as profit.
+        const bc = a.batch_id ? (db.prepare('SELECT cost_price FROM product_batches WHERE id = ?').get(a.batch_id) as any)?.cost_price : null;
+        const unitCost = bc != null ? Number(bc) : (p.cost_price != null ? Number(p.cost_price) : null);
         const lineTotal = Number(p.price) * a.qty;
         subtotal += lineTotal;
         const lineId = randomUUID();
-        db.prepare('INSERT INTO sale_items (id,sale_id,product_id,quantity,unit_price,line_total,batch_id) VALUES (?,?,?,?,?,?,?)')
-          .run(lineId, saleId, p.id, a.qty, p.price, lineTotal, a.batch_id);
+        db.prepare('INSERT INTO sale_items (id,sale_id,product_id,quantity,unit_price,line_total,batch_id,unit_cost) VALUES (?,?,?,?,?,?,?,?)')
+          .run(lineId, saleId, p.id, a.qty, p.price, lineTotal, a.batch_id, unitCost);
         const movementId = randomUUID();
         try {
           db.prepare('INSERT INTO stock_movements (id,product_id,type,quantity,reference,notes,created_by,created_at) VALUES (?,?,?,?,?,?,?,?)')
             .run(movementId, p.id, 'sale', -a.qty, saleId, a.batch_no ? 'batch ' + a.batch_no : null, cashier_id || null, now);
         } catch {}
-        soldLines.push({ id: lineId, product_id: p.id, quantity: a.qty, unit_price: p.price, line_total: lineTotal, movement_id: movementId, batch_id: a.batch_id });
+        soldLines.push({ id: lineId, product_id: p.id, quantity: a.qty, unit_price: p.price, line_total: lineTotal, movement_id: movementId, batch_id: a.batch_id, unit_cost: unitCost });
       }
 
       recomputeStock(db, p.id);

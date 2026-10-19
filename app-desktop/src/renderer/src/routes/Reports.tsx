@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { formatLKR, formatLKRShort } from '../lib/format';
 import Select from '../components/Select';
+import ProfitReport from '../components/ProfitReport';
 
 const RANGES = [
   { value:'today', label:'Today' },
@@ -28,6 +29,7 @@ export default function Reports({ user, tokens, darkMode }: { user: any; tokens?
   const [topProducts, setTop]   = useState<any[]>([]);
   const [lowStock, setLow]      = useState<any[]>([]);
   const [nearExpiry, setNear]   = useState<any[]>([]);
+  const [profit, setProfit]     = useState<any>(null);
   const [loading, setLoading]   = useState(false);
 
   useEffect(() => { fetchData(); }, [range, reportType]);
@@ -44,6 +46,9 @@ export default function Reports({ user, tokens, darkMode }: { user: any; tokens?
         setSummary(sumRes?.data ?? {});
         setTrend(trendRes?.data ?? []);
         setTop(topRes?.data ?? []);
+      } else if (reportType === 'profit') {
+        const res: any = await (window as any).api?.reports?.profit?.(range);
+        setProfit(res?.ok ? res.data : null);
       } else if (reportType === 'lowstock') {
         const res = await window.api?.reports?.lowStock?.(10);
         setLow(res?.data ?? []);
@@ -58,7 +63,12 @@ export default function Reports({ user, tokens, darkMode }: { user: any; tokens?
   async function exportCSV() {
     try {
       let csv = '';
-      if (reportType === 'sales') {
+      const NL = String.fromCharCode(10);
+      const q = (v: any) => `"${String(v ?? '').replace(/"/g, '""')}"`;
+      if (reportType === 'profit') {
+        csv = 'Item,SKU,Category,Qty sold,Sales,Cost,Profit,Margin %,Cost known for all' + NL + (profit?.byItem || []).map((i: any) =>
+          [q(i.name), q(i.sku), q(i.category), i.qty, i.revenue, i.cost, i.profit, i.margin ?? '', i.complete ? 'yes' : 'no'].join(',')).join(NL);
+      } else if (reportType === 'sales') {
         csv = 'Date,Amount,Transactions\n' + trend.map(d => `${d.date},${d.value},${d.transactions}`).join('\n');
       } else if (reportType === 'top') {
         csv = 'Product,SKU,Qty Sold,Revenue\n' + topProducts.map(p => `${p.name},${p.sku},${p.total_qty},${p.total_revenue}`).join('\n');
@@ -79,9 +89,9 @@ export default function Reports({ user, tokens, darkMode }: { user: any; tokens?
   const ts = dm ? 'text-slate-400' : 'text-slate-500';
 
   return (
-    <div className="space-y-6">
+    <div className="flex flex-col gap-5 lg:h-[calc(100vh-2.5rem)]">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="shrink-0 flex items-center justify-between">
         <div>
           <h1 className={`text-2xl font-bold ${tp}`}>Reports & Analytics</h1>
           <p className={`text-sm mt-0.5 ${ts}`}>Track your pharmacy performance and insights</p>
@@ -92,12 +102,13 @@ export default function Reports({ user, tokens, darkMode }: { user: any; tokens?
       </div>
 
       {/* Filters */}
-      <div className={`${card} !p-4`}>
+      <div className={`${card} !p-4 shrink-0`}>
         <div className="grid grid-cols-2 gap-4">
           <div>
             <label className={`block text-xs font-semibold uppercase tracking-wide mb-1.5 ${ts}`}>Report Type</label>
             <Select aria-label="Report type" value={reportType} onChange={setType} options={[
               { value: 'sales',    label: 'Sales report' },
+              { value: 'profit',   label: 'Profit' },
               { value: 'top',      label: 'Top products' },
               { value: 'lowstock', label: 'Low stock' },
               { value: 'expiry',   label: 'Near expiry' },
@@ -112,6 +123,12 @@ export default function Reports({ user, tokens, darkMode }: { user: any; tokens?
       </div>
 
       {loading && <div className={`text-center py-8 ${ts}`}>Loading...</div>}
+
+      {reportType === 'profit' && !loading && (
+        <div className="flex-1 min-h-0"><ProfitReport data={profit} darkMode={dm} /></div>
+      )}
+
+      <div className={`flex-1 min-h-0 overflow-auto space-y-6 ${reportType === 'profit' ? 'hidden' : ''}`}>
 
       {/* Sales Summary */}
       {reportType === 'sales' && !loading && (
@@ -277,6 +294,7 @@ export default function Reports({ user, tokens, darkMode }: { user: any; tokens?
           )}
         </div>
       )}
+      </div>
     </div>
   );
 }

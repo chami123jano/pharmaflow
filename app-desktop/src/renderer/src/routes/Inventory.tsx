@@ -40,6 +40,34 @@ function categoryOptions(current?: string) {
   return opts;
 }
 
+/**
+ * What one unit earns, worked out as the price and cost are typed.
+ *
+ * Margin is profit as a share of the selling price — the figure that matches
+ * the Profit report. Markup (profit as a share of cost) is shown beside it
+ * because that is how suppliers and many owners talk about it.
+ */
+function MarginNote({ price, cost, dark }: { price: string; cost: string; dark?: boolean }) {
+  const p = Number(price), c = Number(cost);
+  const base = 'col-span-2 -mt-2 text-sm rounded-xl px-3.5 py-2.5';
+  if (String(cost).trim() === '' || !Number.isFinite(c)) {
+    return <p className={`${base} ${dark ? 'bg-slate-700/40 text-slate-400' : 'bg-slate-50 text-slate-500'}`}>
+      Enter the cost to see the profit on each one. Deliveries fill it in for you.
+    </p>;
+  }
+  if (!(p > 0)) return null;
+  const each = Math.round((p - c) * 100) / 100;
+  if (each <= 0) {
+    return <p className={`${base} font-medium ${dark ? 'bg-red-950/40 text-red-300' : 'bg-red-50 text-red-700'}`}>
+      {each === 0 ? 'Selling at cost — no profit on this item.' : `Selling below cost — every one sold loses ${formatLKR(-each)}.`}
+    </p>;
+  }
+  return <p className={`${base} ${dark ? 'bg-lime-950/40 text-lime-300' : 'bg-lime-50 text-lime-800'}`}>
+    Profit <b>{formatLKR(each)}</b> on each · margin <b>{Math.round((each / p) * 1000) / 10}%</b>
+    <span className="opacity-70"> (markup {c > 0 ? Math.round((each / c) * 1000) / 10 + '%' : '—'})</span>
+  </p>;
+}
+
 function Badge({ stock }: { stock: number }) {
   if (stock === 0) return <span className={pill('out')}>Out</span>;
   if (stock <= 10) return <span className={pill('low')}>Low</span>;
@@ -49,6 +77,7 @@ function Badge({ stock }: { stock: number }) {
 export default function Inventory({ user, tokens, darkMode }: { user: any; tokens?: any; darkMode?: boolean }) {
   const toast = useToast();
   const ask = useConfirm();
+  const isAdmin = user?.role === 'admin';
   const [products, setProducts]   = useState<any[]>([]);
   const [search, setSearch]       = useState('');
   const [cat, setCat]             = useState('All');
@@ -62,7 +91,7 @@ export default function Inventory({ user, tokens, darkMode }: { user: any; token
   const searchRef = useRef<HTMLInputElement>(null);
   const PER_PAGE = 15;
 
-  const emptyForm = { name:'', sku:'', price:'', stock:'0', category:'Analgesic', supplier:'', expiry:'', description:'', generic_name:'', barcode:'' };
+  const emptyForm = { name:'', sku:'', price:'', cost_price:'', stock:'0', category:'Analgesic', supplier:'', expiry:'', description:'', generic_name:'', barcode:'' };
   const [form, setForm] = useState(emptyForm);
   const [showBulk, setShowBulk] = useState(false);
   // When entering a run of products, the form stays open and clears itself so
@@ -96,7 +125,8 @@ export default function Inventory({ user, tokens, darkMode }: { user: any; token
 
   async function handleAdd(e: React.FormEvent) {
     e.preventDefault(); setLoading(true);
-    const res: any = await window.api?.products?.create?.({ ...form, price: Number(form.price), stock: Number(form.stock) });
+    const res: any = await window.api?.products?.create?.({ ...form, price: Number(form.price), stock: Number(form.stock),
+      cost_price: isAdmin ? form.cost_price : '' });
     setLoading(false);
     if (res?.ok) {
       toast.success(`Added ${form.name}`);
@@ -105,34 +135,37 @@ export default function Inventory({ user, tokens, darkMode }: { user: any; token
       if (keepOpen) setTimeout(() => nameRef.current?.focus(), 50);
       else setShowAdd(false);
     }
-    else toast.error(res?.error === 'SKU_EXISTS' ? 'SKU already exists' : (res?.error || 'Failed'));
+    else toast.error(res?.error === 'SKU_EXISTS' ? 'SKU already exists' : (res?.message || res?.error || 'Failed'));
   }
 
   async function handleEdit(e: React.FormEvent) {
     e.preventDefault(); setLoading(true);
     // stock is deliberately not sent — it belongs to the batches
-    const { stock: _unused, ...details } = form;
-    const res: any = await window.api?.products?.update?.(showEdit.id, { ...details, price: Number(form.price) });
+    const { stock: _unused, cost_price, ...details } = form;
+    // Only an admin sees the cost, so only an admin's save may change it.
+    const patch: any = { ...details, price: Number(form.price) };
+    if (isAdmin) patch.cost_price = cost_price;
+    const res: any = await window.api?.products?.update?.(showEdit.id, patch);
     setLoading(false);
     if (res?.ok) { toast.success('Product updated!'); setShowEdit(null); fetchProducts(); }
-    else toast.error(res?.error || 'Failed');
+    else toast.error(res?.message || res?.error || 'Failed');
   }
 
   async function handleDelete(p: any) {
     if (!(await ask({ title: `Delete ${p.name}?`, message: 'This cannot be undone.', tone: 'danger' }))) return;
     const res: any = await window.api?.products?.delete?.(p.id);
     if (res?.ok) { toast.success('Deleted'); fetchProducts(); }
-    else toast.error(res?.error || 'Failed');
+    else toast.error(res?.message || res?.error || 'Failed');
   }
 
   async function handleRestock() {
     const res: any = await window.api?.products?.adjustStock?.(showRestock.id, restockQty);
     if (res?.ok) { toast.success(`Added ${restockQty} units`); setRestock(null); fetchProducts(); }
-    else toast.error(res?.error || 'Failed');
+    else toast.error(res?.message || res?.error || 'Failed');
   }
 
   function openEdit(p: any) {
-    setForm({ name:p.name||'', sku:p.sku||'', price:String(p.price||''), stock:String(p.stock||0), category:p.category||'Analgesic', supplier:p.supplier||'', expiry:p.expiry||'', description:p.description||'', generic_name:p.generic_name||'', barcode:p.barcode||'' });
+    setForm({ name:p.name||'', sku:p.sku||'', price:String(p.price||''), cost_price:p.cost_price != null ? String(p.cost_price) : '', stock:String(p.stock||0), category:p.category||'Analgesic', supplier:p.supplier||'', expiry:p.expiry||'', description:p.description||'', generic_name:p.generic_name||'', barcode:p.barcode||'' });
     setShowEdit(p);
   }
 
@@ -256,8 +289,16 @@ export default function Inventory({ user, tokens, darkMode }: { user: any; token
                   <td className={`px-4 py-2 font-mono text-xs ${ts}`}>{p.sku || '-'}</td>
                   <td className={`px-4 py-2 text-xs ${ts}`}>{p.category || '-'}</td>
                   {/* A price of zero is not good news, so it is not shown in green. */}
-                  <td className={`px-4 py-2 font-semibold tabular-nums ${Number(p.price) > 0 ? 'text-lime-700' : 'text-amber-600'}`}>
+                  <td className={`px-4 py-2 font-semibold tabular-nums ${Number(p.price) > 0 ? (dm ? 'text-lime-400' : 'text-lime-700') : 'text-amber-600'}`}>
                     {Number(p.price) > 0 ? formatLKR(p.price) : 'no price'}
+                    {/* Cost and margin for the owner only — not something the counter needs to see. */}
+                    {isAdmin && Number(p.price) > 0 && (
+                      p.cost_price != null
+                        ? <span className={`block text-[11px] font-normal ${Number(p.price) <= Number(p.cost_price) ? 'text-red-600' : ts}`}>
+                            cost {formatLKR(p.cost_price)} · {Math.round(((Number(p.price) - Number(p.cost_price)) / Number(p.price)) * 100)}%
+                          </span>
+                        : <span className="block text-[11px] font-normal text-amber-600">no cost</span>
+                    )}
                   </td>
                   <td className={`px-4 py-2 font-bold tabular-nums ${tp}`}>{p.stock}</td>
                   <td className="px-4 py-2"><Badge stock={p.stock} /></td>
@@ -303,8 +344,14 @@ export default function Inventory({ user, tokens, darkMode }: { user: any; token
                 <input required className={inp} value={form.sku} onChange={e=>setForm(f=>({...f,sku:e.target.value.toUpperCase()}))} placeholder="LK-PARA-500" /></div>
               <div><label className={lbl}>Category</label>
                 <Select aria-label="Category" value={form.category} onChange={(v) => setForm(f => ({ ...f, category: v }))} options={categoryOptions(form.category)} /></div>
-              <div><label className={lbl}>Price (LKR) *</label>
+              <div><label className={lbl}>Selling price (LKR) *</label>
                 <input required type="number" min="0" step="0.01" className={inp} value={form.price} onChange={e=>setForm(f=>({...f,price:e.target.value}))} /></div>
+              {isAdmin && (
+                <div><label className={lbl}>Cost price (LKR)</label>
+                  <input type="number" min="0" step="0.01" className={inp} value={form.cost_price} placeholder="What you pay for one"
+                    onChange={e=>setForm(f=>({...f,cost_price:e.target.value}))} /></div>
+              )}
+              {isAdmin && <MarginNote price={form.price} cost={form.cost_price} dark={dm} />}
               <div><label className={lbl}>Initial Stock</label>
                 <input type="number" min="0" className={inp} value={form.stock} onChange={e=>setForm(f=>({...f,stock:e.target.value}))} /></div>
               <div><label className={lbl}>Expiry Date</label>
@@ -340,8 +387,14 @@ export default function Inventory({ user, tokens, darkMode }: { user: any; token
                 <input required className={inp} value={form.sku} onChange={e=>setForm(f=>({...f,sku:e.target.value.toUpperCase()}))} /></div>
               <div><label className={lbl}>Category</label>
                 <Select aria-label="Category" value={form.category} onChange={(v) => setForm(f => ({ ...f, category: v }))} options={categoryOptions(form.category)} /></div>
-              <div><label className={lbl}>Price (LKR) *</label>
+              <div><label className={lbl}>Selling price (LKR) *</label>
                 <input required type="number" min="0" step="0.01" className={inp} value={form.price} onChange={e=>setForm(f=>({...f,price:e.target.value}))} /></div>
+              {isAdmin && (
+                <div><label className={lbl}>Cost price (LKR)</label>
+                  <input type="number" min="0" step="0.01" className={inp} value={form.cost_price} placeholder="What you pay for one"
+                    onChange={e=>setForm(f=>({...f,cost_price:e.target.value}))} /></div>
+              )}
+              {isAdmin && <MarginNote price={form.price} cost={form.cost_price} dark={dm} />}
               <div>
                 <label className={lbl}>Stock</label>
                 {/* Read-only on purpose: stock is the sum of the batches, so a

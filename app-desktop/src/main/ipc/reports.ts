@@ -152,3 +152,135 @@ ipcMain.handle('reports:inventoryValue', () => {
   const total = db.prepare('SELECT SUM(price*stock) as value, COUNT(*) as count FROM products').get() as any;
   return { ok: true, data: { byCategory: rows, total } };
 });
+
+/**
+ * Profit, worked out line by line.
+ *
+ *   profit = what the customer paid for the line − what those units cost
+ *
+ * "What they paid" is the line total less its share of the bill's discount, so
+ * a 10% discount comes off the profit as well as the takings. "What they cost"
+ * is the cost frozen on the sale line when it sold (the exact delivery it came
+ * out of). Sales made before costs were recorded fall back to the batch's or
+ * item's cost today and are counted as estimated.
+ *
+ * A line with no cost anywhere is NOT treated as costing nothing — that would
+ * report its whole price as profit. It is left out of profit and margin and
+ * listed separately, so the owner can see exactly what is missing.
+ */
+export function profitReport(db: any, start?: string, end?: string) {
+  const where = start && end
+    ? 'WHERE s.voided_at IS NULL AND s.created_at >= ? AND s.created_at <= ?'
+    : 'WHERE s.voided_at IS NULL';
+  const params: any[] = start && end ? [start, end] : [];
+  const rows = db.prepare(`
+    SELECT si.product_id, si.quantity, si.line_total, si.unit_cost,
+           b.cost_price AS batch_cost, p.cost_price AS product_cost,
+           COALESCE(p.name, 'Deleted item') AS name, p.sku, p.category,
+           s.id AS sale_id, s.created_at, s.subtotal, s.discount_amount
+    FROM sale_items si
+    JOIN sales s ON s.id = si.sale_id
+    LEFT JOIN product_batches b ON b.id = si.batch_id
+    LEFT JOIN products p ON p.id = si.product_id
+    ${where}
+  `).all(...params) as any[];
+
+  const r2 = (n: number) => Math.round(n * 100) / 100;
+  const localDay = (iso: string) => new Date(iso).toLocaleDateString('en-CA'); // YYYY-MM-DD, shop's own clock
+
+  const totals = { sales: 0, revenue: 0, costed: 0, cost: 0, profit: 0, discount: 0, uncostedRevenue: 0, uncostedLines: 0, estimatedLines: 0 };
+  const saleIds = new Set<string>();
+  const discounted = new Set<string>();
+  const byDay = new Map<string, any>();
+  const byItem = new Map<string, any>();
+  const missing = new Map<string, any>();
+
+  for (const r of rows) {
+    const share = Number(r.subtotal) > 0 ? Number(r.line_total) / Number(r.subtotal) : 0;
+    const disc = Number(r.discount_amount || 0) * share;
+    const net = Number(r.line_total || 0) - disc;
+    const frozen = r.unit_cost != null;
+    const unit = frozen ? Number(r.unit_cost) : (r.batch_cost != null ? Number(r.batch_cost) : (r.product_cost != null ? Number(r.product_cost) : null));
+
+    saleIds.add(r.sale_id);
+    if (!discounted.has(r.sale_id)) { discounted.add(r.sale_id); totals.discount += Number(r.discount_amount || 0); }
+    totals.revenue += net;
+
+    const day = localDay(r.created_at);
+    const d = byDay.get(day) || { date: day, revenue: 0, cost: 0, profit: 0, costedRevenue: 0, sales: new Set<string>() };
+    d.revenue += net; d.sales.add(r.sale_id);
+
+    const it = byItem.get(r.product_id) || { product_id: r.product_id, name: r.name, sku: r.sku, category: r.category,
+      qty: 0, revenue: 0, cost: 0, profit: 0, costedRevenue: 0, uncostedQty: 0 };
+    it.qty += Number(r.quantity || 0); it.revenue += net;
+
+    if (unit == null) {
+      totals.uncostedRevenue += net; totals.uncostedLines++;
+      it.uncostedQty += Number(r.quantity || 0);
+      const m = missing.get(r.product_id) || { product_id: r.product_id, name: r.name, sku: r.sku, qty: 0, revenue: 0 };
+      m.qty += Number(r.quantity || 0); m.revenue += net; missing.set(r.product_id, m);
+    } else {
+      if (!frozen) totals.estimatedLines++;
+      const cost = unit * Number(r.quantity || 0);
+      totals.costed += net; totals.cost += cost;
+      d.costedRevenue += net; d.cost += cost;
+      it.costedRevenue += net; it.cost += cost;
+    }
+    byDay.set(day, d); byItem.set(r.product_id, it);
+  }
+
+  const margin = (profit: number, rev: number) => (rev > 0 ? r2((profit / rev) * 100) : null);
+  totals.sales = saleIds.size;
+  totals.profit = totals.costed - totals.cost;
+
+  return {
+    summary: {
+      salesCount: totals.sales,
+      revenue: r2(totals.revenue),
+      discount: r2(totals.discount),
+      costedRevenue: r2(totals.costed),
+      cost: r2(totals.cost),
+      profit: r2(totals.profit),
+      margin: margin(totals.profit, totals.costed),
+      uncostedRevenue: r2(totals.uncostedRevenue),
+      uncostedLines: totals.uncostedLines,
+      estimatedLines: totals.estimatedLines,
+    },
+    byDay: [...byDay.values()].sort((a, b) => a.date.localeCompare(b.date)).map((d) => ({
+      date: d.date, sales: d.sales.size, revenue: r2(d.revenue), cost: r2(d.cost),
+      profit: r2(d.costedRevenue - d.cost), margin: margin(d.costedRevenue - d.cost, d.costedRevenue),
+      complete: r2(d.costedRevenue) === r2(d.revenue),
+    })),
+    byItem: [...byItem.values()].map((i) => ({
+      ...i, revenue: r2(i.revenue), cost: r2(i.cost), profit: r2(i.costedRevenue - i.cost),
+      margin: margin(i.costedRevenue - i.cost, i.costedRevenue), complete: i.uncostedQty === 0,
+    })).sort((a, b) => b.profit - a.profit),
+    missingCost: [...missing.values()].map((m) => ({ ...m, revenue: r2(m.revenue) })).sort((a, b) => b.revenue - a.revenue),
+  };
+}
+
+ipcMain.handle('reports:profit', (_e, range?: string, from?: string, to?: string) => {
+  try {
+    const db = getDb();
+    const { start, end } = getDateBounds(range, from, to);
+    const data: any = profitReport(db, start, end);
+
+    // What is on the shelf now, at what it cost and at what it will sell for.
+    const stock = db.prepare(`
+      SELECT SUM(b.qty_remaining * COALESCE(b.cost_price, p.cost_price)) AS at_cost,
+             SUM(CASE WHEN COALESCE(b.cost_price, p.cost_price) IS NULL THEN b.qty_remaining ELSE 0 END) AS units_no_cost,
+             SUM(b.qty_remaining * p.price) AS at_price
+      FROM product_batches b JOIN products p ON p.id = b.product_id WHERE b.qty_remaining > 0
+    `).get() as any;
+    data.stock = {
+      atCost: Number(stock?.at_cost || 0), atPrice: Number(stock?.at_price || 0),
+      unitsWithoutCost: Number(stock?.units_no_cost || 0),
+    };
+    // Items priced at or below what they cost — every sale of these loses money.
+    data.belowCost = db.prepare(`SELECT id, name, sku, price, cost_price FROM products
+      WHERE cost_price IS NOT NULL AND price > 0 AND price <= cost_price ORDER BY name`).all();
+    return { ok: true, data };
+  } catch (err: any) {
+    return { ok: false, error: err?.message || 'PROFIT_FAILED' };
+  }
+});

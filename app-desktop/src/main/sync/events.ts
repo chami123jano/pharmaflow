@@ -125,17 +125,20 @@ export function applyEvent(ev: SyncEvent): string | null {
         // here — it only ever changes through stock.delta.
         if (!existing.updated_at || String(p.updated_at || '') >= String(existing.updated_at)) {
           const sku = skuForIncoming(p.id, p.sku, p.name, p.category, existing.sku);
-          db.prepare(`UPDATE products SET name=?, sku=?, price=?, expiry=?, description=?, supplier=?, category=?, generic_name=?, barcode=?, updated_at=? WHERE id=?`)
-            .run(p.name, sku, p.price, p.expiry ?? null, p.description ?? null, p.supplier ?? null,
+          // The website's editor does not know the cost, so an edit from there
+          // leaves it alone rather than wiping it.
+          const cost = 'cost_price' in p ? (p.cost_price ?? null) : (existing.cost_price ?? null);
+          db.prepare(`UPDATE products SET name=?, sku=?, price=?, cost_price=?, expiry=?, description=?, supplier=?, category=?, generic_name=?, barcode=?, updated_at=? WHERE id=?`)
+            .run(p.name, sku, p.price, cost, p.expiry ?? null, p.description ?? null, p.supplier ?? null,
                  p.category ?? null, p.generic_name ?? null, p.barcode ?? null, p.updated_at || now, p.id);
         }
       } else {
         // A product arriving for the first time starts at zero; its opening
         // stock comes as its own delta event.
         const sku = skuForIncoming(p.id, p.sku, p.name, p.category);
-        db.prepare(`INSERT INTO products (id,name,sku,price,stock,expiry,description,supplier,category,generic_name,barcode,created_at,updated_at)
-                    VALUES (?,?,?,?,0,?,?,?,?,?,?,?,?)`)
-          .run(p.id, p.name, sku, p.price, p.expiry ?? null, p.description ?? null, p.supplier ?? null,
+        db.prepare(`INSERT INTO products (id,name,sku,price,cost_price,stock,expiry,description,supplier,category,generic_name,barcode,created_at,updated_at)
+                    VALUES (?,?,?,?,?,0,?,?,?,?,?,?,?,?)`)
+          .run(p.id, p.name, sku, p.price, p.cost_price ?? null, p.expiry ?? null, p.description ?? null, p.supplier ?? null,
                p.category ?? null, p.generic_name ?? null, p.barcode ?? null, p.created_at || now, p.updated_at || now);
       }
       break;
@@ -161,10 +164,10 @@ export function applyEvent(ev: SyncEvent): string | null {
         if (existing) {
           db.prepare('UPDATE product_batches SET qty_remaining = qty_remaining + ? WHERE id = ?').run(qty, p.batch_id);
         } else {
-          db.prepare(`INSERT INTO product_batches (id,product_id,batch_no,expiry,qty_received,qty_remaining,notes,created_at)
-                      VALUES (?,?,?,?,?,?,?,?)`)
+          db.prepare(`INSERT INTO product_batches (id,product_id,batch_no,expiry,qty_received,qty_remaining,cost_price,notes,created_at)
+                      VALUES (?,?,?,?,?,?,?,?,?)`)
             .run(p.batch_id || randomUUID(), p.product_id, p.batch_no || null, p.expiry || null,
-                 qty, qty, 'from ' + ev.device, p.ts || ev.ts);
+                 qty, qty, p.cost_price ?? null, 'from ' + ev.device, p.ts || ev.ts);
         }
       } else {
         const take = -qty;
@@ -204,8 +207,8 @@ export function applyEvent(ev: SyncEvent): string | null {
              p.discount_amount ?? 0, p.total ?? 0, p.payment_method || 'cash', p.customer_amount ?? 0,
              p.change_amount ?? 0, p.cashier_id ?? null, p.notes ?? null, p.created_at || ev.ts, p.voided_at ?? null);
       for (const it of p.items || []) {
-        db.prepare('INSERT OR IGNORE INTO sale_items (id,sale_id,product_id,quantity,unit_price,line_total) VALUES (?,?,?,?,?,?)')
-          .run(it.id || randomUUID(), p.id, it.product_id, it.quantity, it.unit_price, it.line_total);
+        db.prepare('INSERT OR IGNORE INTO sale_items (id,sale_id,product_id,quantity,unit_price,line_total,batch_id,unit_cost) VALUES (?,?,?,?,?,?,?,?)')
+          .run(it.id || randomUUID(), p.id, it.product_id, it.quantity, it.unit_price, it.line_total, it.batch_id ?? null, it.unit_cost ?? null);
       }
       break;
     }

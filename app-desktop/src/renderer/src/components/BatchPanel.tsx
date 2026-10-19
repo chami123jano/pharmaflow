@@ -30,7 +30,8 @@ export default function BatchPanel({ product, user, darkMode, onClose, onChanged
   const [qty, setQty] = useState('');
   const [expiry, setExpiry] = useState('');
   const [batchNo, setBatchNo] = useState('');
-  const [cost, setCost] = useState('');
+  const lastCost = product?.cost_price != null ? String(product.cost_price) : '';
+  const [cost, setCost] = useState(lastCost);
   const [supplier, setSupplier] = useState('');
   const [busy, setBusy] = useState(false);
   const qtyRef = useRef<HTMLInputElement>(null);
@@ -60,7 +61,7 @@ export default function BatchPanel({ product, user, darkMode, onClose, onChanged
     setBusy(false);
     if (r?.ok) {
       toast.success(`${n} added${expiry ? ', expires ' + expiry : ''}`);
-      setQty(''); setExpiry(''); setBatchNo(''); setCost('');
+      setQty(''); setExpiry(''); setBatchNo(''); setCost(lastCost);
       load(); onChanged();
       setTimeout(() => qtyRef.current?.focus(), 40);
     } else {

@@ -88,6 +88,24 @@ when the split cannot.
 Existing stock is migrated once into a single `OPENING` batch, guarded by the
 `batches.migrated` setting.
 
+### Cost and profit (`db/cost.ts`, `reports:profit`, `components/ProfitReport.tsx`)
+
+Three costs, most specific first: **`sale_items.unit_cost`** (frozen when the
+line sold) → **`product_batches.cost_price`** (that delivery) →
+**`products.cost_price`** (latest price paid, updated by every delivery via
+`noteLatestCost`). `sales:create` freezes the batch cost, else the product cost,
+else **NULL** — never 0, which would report the whole sale as profit.
+
+- Profit per line = line total − its share of the bill discount − unit cost × qty.
+  Lines with no cost anywhere are **left out of profit and margin** and listed
+  as "no cost price"; lines costed after the fact are counted as estimated.
+- Margin is profit ÷ sales (matches the report); markup is shown beside it.
+- Cost and profit are **admin only** on screen (Inventory, Dashboard; Reports is
+  admin-only already). A clerk's product edit does not send `cost_price`.
+- Website edits carry no cost, so `product.upsert` from there keeps the
+  existing cost rather than wiping it. Products' cost is not mirrored to the
+  cloud.
+
 ### Goods received notes (`ipc/grn.ts`, `routes/Receive.tsx`)
 
 A GRN is one supplier delivery: header in `grns`, lines in `grn_items`. **Every
@@ -109,6 +127,7 @@ its own path.
   unit is still on the shelf; it takes the stock back off as negative deltas.
 - The unsaved note lives in `localStorage.grnDraft`, so leaving the page to
   serve a customer loses nothing. Save is Ctrl+Enter — Ctrl+S is "go to Sales".
+- Each line's invoice unit cost becomes the item's `cost_price` (`noteLatestCost`).
 - Printed as A4 PDF (`util:saveDocumentPDF`, filed under
   Documents/PharmaFlow/GRNs) or on the receipt roll (`printHTML`), from
   `lib/grnDoc.ts`.

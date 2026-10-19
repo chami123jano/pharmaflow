@@ -7,6 +7,7 @@ import { randomUUID } from 'crypto';
 import log from '../log.js';
 import { recordEvent } from '../sync/events.js';
 import { receiveBatch, recomputeStock, isExpired, StockError } from '../db/batches.js';
+import { noteLatestCost } from '../db/cost.js';
 
 ipcMain.handle('batches:list', (_e, productId: string) => {
   const db = getDb();
@@ -85,8 +86,10 @@ ipcMain.handle('batches:receive', (_e, payload: {
     // at home and a sale at the shop both survive the merge.
     recordEvent('stock.delta', {
       product_id: payload.product_id, delta: batch.qty_received, reason: 'restock',
-      movement_id: movementId, batch_id: batch.id, expiry: batch.expiry, batch_no: batch.batch_no, ts: now,
+      movement_id: movementId, batch_id: batch.id, expiry: batch.expiry, batch_no: batch.batch_no,
+      cost_price: batch.cost_price ?? null, ts: now,
     });
+    noteLatestCost(db, payload.product_id, batch.cost_price);
     log.info('[IPC batches:receive]', { product: payload.product_id, qty: batch.qty_received, expiry: batch.expiry });
     return { ok: true, data: batch };
   } catch (err: any) {

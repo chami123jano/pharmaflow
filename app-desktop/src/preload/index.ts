@@ -90,6 +90,7 @@ const api = {
     topProducts:     (range?: string, from?: string, to?: string) => ipcRenderer.invoke('reports:topProducts', range, from, to) as Promise<IpcResult>,
     stockMovements:  (productId?: string) => ipcRenderer.invoke('reports:stockMovements', productId) as Promise<IpcResult>,
     inventoryValue:  () => ipcRenderer.invoke('reports:inventoryValue') as Promise<IpcResult>,
+    profit:          (range?: string, from?: string, to?: string) => ipcRenderer.invoke('reports:profit', range, from, to) as Promise<IpcResult>,
   },
   settings: {
     get:  (key: string) => ipcRenderer.invoke('settings:get', key) as Promise<IpcResult>,

@@ -48,11 +48,14 @@ export default function Dashboard({ user, tokens, onQuickNav, darkMode }: { user
         window.api?.reports?.nearExpiry?.(30),
         window.api?.sales?.list?.(5),
       ]);
+      // Today's profit is for the owner; the counter staff see takings only.
+      const profitRes: any = user?.role === 'admin' ? await (window as any).api?.reports?.profit?.('today') : null;
       const productsRes = await window.api?.products?.list?.();
 
       setStats({
         salesTotal: sumRes?.data?.totalSales ?? 0,
         transactions: sumRes?.data?.transactions ?? 0,
+        profit: profitRes?.ok ? profitRes.data.summary : null,
         totalProducts: (productsRes?.data ?? []).length,
         lowStock: (lowRes?.data ?? []).length,
         nearExpiry: (nearRes?.data ?? []).length,
@@ -124,7 +127,9 @@ export default function Dashboard({ user, tokens, onQuickNav, darkMode }: { user
       <div className="shrink-0 grid grid-cols-2 lg:grid-cols-4 gap-4">
         <StatCard label="Total Products" value={stats.totalProducts ?? 0} icon={<IconBox />} color="text-teal-700" bg="bg-teal-50" />
         <StatCard label="Low Stock Items" value={stats.lowStock ?? 0} sub="Need reorder" icon={<IconAlert />} color="text-orange-600" bg="bg-orange-50" />
-        <StatCard label="Sales Today" value={formatLKR(stats.salesTotal ?? 0)} sub={`${stats.transactions ?? 0} transactions`} icon={<IconReceipt />} color="text-lime-700" bg="bg-lime-50" />
+        <StatCard label="Sales Today" value={formatLKR(stats.salesTotal ?? 0)} sub={stats.profit
+          ? `${stats.transactions ?? 0} bill${stats.transactions === 1 ? '' : 's'} · profit ${formatLKR(stats.profit.profit)}${stats.profit.uncostedRevenue > 0 ? '*' : ''}`
+          : `${stats.transactions ?? 0} transactions`} icon={<IconReceipt />} color="text-lime-700" bg="bg-lime-50" />
         <StatCard label="Expiring Soon" value={stats.nearExpiry ?? 0} sub="Within 30 days" icon={<IconClock />} color="text-red-600" bg="bg-red-50" />
       </div>
 

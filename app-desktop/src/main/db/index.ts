@@ -77,6 +77,10 @@ export async function ensureSchema() {
   ensureColumn(d, 'products', 'generic_name', 'TEXT');
   // Scanned barcode, kept separate from the internally generated SKU.
   ensureColumn(d, 'products', 'barcode', 'TEXT');
+  // What the shop pays for one unit — the latest price paid, kept up to date
+  // by deliveries. A batch's own cost wins where it has one; this covers stock
+  // that arrived without a cost, so profit is not left blank.
+  ensureColumn(d, 'products', 'cost_price', 'REAL');
   d.prepare('CREATE INDEX IF NOT EXISTS idx_products_sku      ON products(sku)').run();
   d.prepare('CREATE INDEX IF NOT EXISTS idx_products_name     ON products(name)').run();
   d.prepare('CREATE INDEX IF NOT EXISTS idx_products_barcode  ON products(barcode)').run();
@@ -165,6 +169,10 @@ export async function ensureSchema() {
   // Which batch each sold line came out of, for recalls and for putting the
   // right quantity back when a sale is voided.
   ensureColumn(d, 'sale_items', 'batch_id', 'TEXT');
+  // What the units on this line cost, frozen at the moment of sale. Profit
+  // reports read this, so a later price rise never rewrites past profit.
+  // NULL means no cost was known when it sold.
+  ensureColumn(d, 'sale_items', 'unit_cost', 'REAL');
 
   ensureTable(d, 'settings', `CREATE TABLE IF NOT EXISTS settings (key TEXT PRIMARY KEY, value TEXT)`);
   ensureTable(d, 'receipt_seq', `CREATE TABLE IF NOT EXISTS receipt_seq (id INTEGER PRIMARY KEY AUTOINCREMENT, ts TEXT NOT NULL)`);

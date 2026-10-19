@@ -5,6 +5,7 @@ import { randomUUID } from 'crypto';
 import { recordEvent } from '../sync/events.js';
 import { receiveBatch } from '../db/batches.js';
 import { generateUniqueSku } from '../db/sku.js';
+import { parseCost } from '../db/cost.js';
 
 // Ensure optional columns exist even if migrations haven't run yet (defensive)
 let ensuredExtraCols = false;
@@ -70,6 +71,8 @@ ipcMain.handle('products:create', (_e, payload: any) => {
   const { name, sku, price, stock = 0, expiry, description = null, supplier = null, category = null,
           generic_name = null, barcode = null } = payload;
   if (!name || price == null) return { ok: false, error: 'VALIDATION' };
+  const cost = parseCost(payload?.cost_price);
+  if (cost === 'INVALID') return { ok: false, error: 'INVALID_COST', message: 'Cost price must be a number, zero or more' };
   const db = getDb();
   // Auto-generate SKU if missing/empty
   const finalSku = (typeof sku === 'string' && sku.trim()) ? String(sku).trim().toUpperCase() : generateUniqueSku(name, category || description || undefined);
@@ -82,13 +85,13 @@ ipcMain.handle('products:create', (_e, payload: any) => {
     // Stock is owned by the batches, so the product starts at zero and any
     // opening quantity arrives as a batch below. Writing it here as well would
     // double-count once recomputeStock runs.
-    db.prepare('INSERT INTO products (id,name,sku,price,stock,expiry,description,supplier,created_at,updated_at,category,generic_name,barcode) VALUES (?,?,?,?,0,?,?,?,?,?,?,?,?)')
-      .run(id, name, finalSku, price, expiry || null, description, supplier, now, now, category,
+    db.prepare('INSERT INTO products (id,name,sku,price,cost_price,stock,expiry,description,supplier,created_at,updated_at,category,generic_name,barcode) VALUES (?,?,?,?,?,0,?,?,?,?,?,?,?,?)')
+      .run(id, name, finalSku, price, cost, expiry || null, description, supplier, now, now, category,
            generic_name || null, (barcode ? String(barcode).trim() : null) || null);
     if (Number(stock) > 0) {
-      try { receiveBatch(db, { product_id: id, qty: Number(stock), expiry: expiry || null, notes: 'Opening stock' }); } catch {}
+      try { receiveBatch(db, { product_id: id, qty: Number(stock), expiry: expiry || null, cost_price: cost, notes: 'Opening stock' }); } catch {}
     }
-    recordEvent('product.upsert', { id, name, sku: finalSku, price, expiry: expiry || null,
+    recordEvent('product.upsert', { id, name, sku: finalSku, price, cost_price: cost, expiry: expiry || null,
       description, supplier, category, generic_name: generic_name || null,
       barcode: barcode || null, created_at: now, updated_at: now });
     // Opening stock travels as its own delta so it can never overwrite a
@@ -118,14 +121,19 @@ ipcMain.handle('products:update', (_e, id: string, patch: any) => {
    * Stock changes by receiving a delivery or adjusting a batch. Nowhere else.
    */
   const { stock: _ignoredStock, ...safePatch } = patch || {};
-  const merged = { ...existing, ...safePatch, updated_at: new Date().toISOString() };
+  if ('cost_price' in safePatch) {
+    const cost = parseCost(safePatch.cost_price);
+    if (cost === 'INVALID') return { ok: false, error: 'INVALID_COST', message: 'Cost price must be a number, zero or more' };
+    safePatch.cost_price = cost;
+  }
+  const merged: any = { ...(existing as any), ...safePatch, updated_at: new Date().toISOString() };
   try {
     log.info('[IPC products:update] updating', { id, patch: safePatch });
-    db.prepare(`UPDATE products SET name=?, sku=?, price=?, expiry=?, description=?, supplier=?, category=?, generic_name=?, barcode=?, updated_at=? WHERE id=?`)
-      .run(merged.name, merged.sku, merged.price, merged.expiry || null, merged.description || null, merged.supplier || null, merged.category || null,
+    db.prepare(`UPDATE products SET name=?, sku=?, price=?, cost_price=?, expiry=?, description=?, supplier=?, category=?, generic_name=?, barcode=?, updated_at=? WHERE id=?`)
+      .run(merged.name, merged.sku, merged.price, merged.cost_price ?? null, merged.expiry || null, merged.description || null, merged.supplier || null, merged.category || null,
            merged.generic_name || null, merged.barcode || null, merged.updated_at, id);
     recordEvent('product.upsert', { id, name: merged.name, sku: merged.sku, price: merged.price,
-      expiry: merged.expiry || null, description: merged.description || null, supplier: merged.supplier || null,
+      cost_price: merged.cost_price ?? null, expiry: merged.expiry || null, description: merged.description || null, supplier: merged.supplier || null,
       category: merged.category || null, generic_name: merged.generic_name || null,
       barcode: merged.barcode || null, updated_at: merged.updated_at });
     return { ok: true };

@@ -21,6 +21,7 @@ import { getDb } from '../db/index.js';
 import log from '../log.js';
 import { recordEvent, getDeviceId } from '../sync/events.js';
 import { receiveBatch, recomputeStock, StockError } from '../db/batches.js';
+import { noteLatestCost } from '../db/cost.js';
 
 interface LineIn {
   product_id: string;
@@ -157,8 +158,12 @@ ipcMain.handle('grn:create', (_e, input: GrnIn) => {
     for (const l of lines) {
       recordEvent('stock.delta', {
         product_id: l.product_id, delta: l.qty + l.free_qty, reason: 'restock',
-        movement_id: l.movement_id, batch_id: l.batch_id, expiry: l.expiry, batch_no: l.batch_no, ts: now,
+        movement_id: l.movement_id, batch_id: l.batch_id, expiry: l.expiry, batch_no: l.batch_no,
+        cost_price: l.batch_cost ?? null, ts: now,
       });
+      // The price on the invoice, not the free-goods average: it is the figure
+      // the owner recognises and the one the next order will be at.
+      noteLatestCost(db, l.product_id, l.cost_price);
     }
     recordEvent('grn.created', {
       ...grn,
