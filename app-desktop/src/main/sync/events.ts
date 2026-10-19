@@ -17,6 +17,7 @@ import { getDb } from '../db/index.js';
 import { randomUUID } from 'crypto';
 import log from '../log.js';
 import { recomputeStock } from '../db/batches.js';
+import { skuForIncoming } from '../db/sku.js';
 
 export type EventType = 'product.upsert' | 'product.delete' | 'stock.delta' | 'sale.created';
 
@@ -123,16 +124,18 @@ export function applyEvent(ev: SyncEvent): string | null {
         // Last edit wins on descriptive fields. Stock is deliberately absent
         // here — it only ever changes through stock.delta.
         if (!existing.updated_at || String(p.updated_at || '') >= String(existing.updated_at)) {
+          const sku = skuForIncoming(p.id, p.sku, p.name, p.category, existing.sku);
           db.prepare(`UPDATE products SET name=?, sku=?, price=?, expiry=?, description=?, supplier=?, category=?, generic_name=?, barcode=?, updated_at=? WHERE id=?`)
-            .run(p.name, p.sku, p.price, p.expiry ?? null, p.description ?? null, p.supplier ?? null,
+            .run(p.name, sku, p.price, p.expiry ?? null, p.description ?? null, p.supplier ?? null,
                  p.category ?? null, p.generic_name ?? null, p.barcode ?? null, p.updated_at || now, p.id);
         }
       } else {
         // A product arriving for the first time starts at zero; its opening
         // stock comes as its own delta event.
+        const sku = skuForIncoming(p.id, p.sku, p.name, p.category);
         db.prepare(`INSERT INTO products (id,name,sku,price,stock,expiry,description,supplier,category,generic_name,barcode,created_at,updated_at)
                     VALUES (?,?,?,?,0,?,?,?,?,?,?,?,?)`)
-          .run(p.id, p.name, p.sku, p.price, p.expiry ?? null, p.description ?? null, p.supplier ?? null,
+          .run(p.id, p.name, sku, p.price, p.expiry ?? null, p.description ?? null, p.supplier ?? null,
                p.category ?? null, p.generic_name ?? null, p.barcode ?? null, p.created_at || now, p.updated_at || now);
       }
       break;

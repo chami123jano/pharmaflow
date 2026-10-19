@@ -128,6 +128,14 @@ Three rules keep it correct — do not break them:
 database that call writes to `settings`, and starting a nested write mid-insert
 upsets the sql.js wrapper.
 
+**An incoming product's SKU goes through `skuForIncoming()`** (`db/sku.ts`), never
+straight into the row. `products.sku` is `UNIQUE NOT NULL`, the website's SKU
+box is optional, and SKUs are generated independently on each device — so an
+incoming code can be blank or already taken here. Stored as sent, the database
+refuses the whole product: added on the phone, shown on the website, and never
+arriving at the till. The incoming code is kept whenever it can be; an update
+keeps the till's existing SKU rather than inventing a new one.
+
 ### Auth / Sessions
 
 Sessions are an in-memory `Map<token, Session>` in `src/main/ipc/auth.ts` — they are lost when the app restarts. The renderer persists the token in `localStorage` and re-validates it via `auth:me` on boot (`src/renderer/src/lib/auth.tsx`). `AuthContext` (`useAuth()` hook) provides `user`, `token`, `login`, `logout` to all components.
