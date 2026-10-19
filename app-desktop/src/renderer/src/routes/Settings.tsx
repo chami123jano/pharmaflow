@@ -2,6 +2,7 @@ import { useEffect, useState, type ReactNode } from 'react';
 import SyncPanel from '../components/SyncPanel';
 import LockdownPanel from '../components/LockdownPanel';
 import ShopPanel from '../components/ShopPanel';
+import CategoriesPanel from '../components/CategoriesPanel';
 import Select from '../components/Select';
 import { useToast } from '../components/Toast';
 import { useConfirm } from '../components/Confirm';
@@ -16,6 +17,7 @@ interface Setting { key:string; value:string }
  */
 const TABS = [
   { key: 'shop',     label: 'Shop details' },
+  { key: 'categories', label: 'Categories' },
   { key: 'printer',  label: 'Printer' },
   { key: 'lockdown', label: 'Staff lockdown' },
   { key: 'sync',     label: 'Cloud sync' },
@@ -213,6 +215,7 @@ export default function Settings({ user, darkMode }: { user?: any; tokens?: any;
 
       <div className="flex-1 min-h-0 overflow-y-auto -mx-1 px-1 pb-1">
         {tab === 'shop' && <ShopPanel darkMode={darkMode} />}
+        {tab === 'categories' && <CategoriesPanel darkMode={darkMode} />}
         {tab === 'lockdown' && <LockdownPanel user={user} darkMode={darkMode} />}
         {tab === 'sync' && <SyncPanel darkMode={darkMode} />}
 

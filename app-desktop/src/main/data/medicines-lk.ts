@@ -272,10 +272,10 @@ export const MEDICINES_LK: SeedMedicine[] = [
   { name: "Timoptol Eye Drops 0.5%", generic: "Timolol Maleate", cat: "Ophthalmic", sku: "LK-TIM-EYE" },
   { name: "Tears Naturale Eye Drops", generic: "Hypromellose", cat: "Ophthalmic", sku: "LK-TEA-EYE" },
   { name: "Patanol Eye Drops", generic: "Olopatadine", cat: "Ophthalmic", sku: "LK-PAT-EYE" },
-  { name: "Zentel 400mg (Albendazole)", generic: "Albendazole", cat: "Antiparasitic", sku: "LK-ZEN-400" },
-  { name: "Vermox 100mg (Mebendazole)", generic: "Mebendazole", cat: "Antiparasitic", sku: "LK-VER-100" },
-  { name: "Combantrin 250mg (Pyrantel)", generic: "Pyrantel", cat: "Antiparasitic", sku: "LK-COM-250" },
-  { name: "Ivermectin 6mg", generic: "Ivermectin", cat: "Antiparasitic", sku: "LK-IVM-6" },
+  { name: "Zentel 400mg (Albendazole)", generic: "Albendazole", cat: "Anthelmintic", sku: "LK-ZEN-400" },
+  { name: "Vermox 100mg (Mebendazole)", generic: "Mebendazole", cat: "Anthelmintic", sku: "LK-VER-100" },
+  { name: "Combantrin 250mg (Pyrantel)", generic: "Pyrantel", cat: "Anthelmintic", sku: "LK-COM-250" },
+  { name: "Ivermectin 6mg", generic: "Ivermectin", cat: "Anthelmintic", sku: "LK-IVM-6" },
   { name: "Plaquenil 200mg (Hydroxychloroquine)", generic: "Hydroxychloroquine", cat: "Antiparasitic", sku: "LK-PLA-200" },
   { name: "Flomax 0.4mg (Tamsulosin)", generic: "Tamsulosin", cat: "Urological", sku: "LK-FLO-04" },
   { name: "Proscar 5mg (Finasteride)", generic: "Finasteride", cat: "Urological", sku: "LK-PRO-5" },
@@ -451,4 +451,4 @@ export const MEDICINES_LK: SeedMedicine[] = [
   { name: "Digital Thermometer", generic: "Clinical Thermometer", cat: "First Aid", sku: "LK-DIGI-THE" },
 ];
 
-export const MEDICINE_CATEGORIES = ["Analgesic","Antibiotic","Antidiabetic","Antifungal","Antihistamine","Antihypertensive","Antiparasitic","Antiviral","Ayurvedic","CNS","Cardiac","Diuretic","First Aid","GI","Gynaecology","NSAID","Ophthalmic","Respiratory","Rheumatology","Statin","Steroid","Supplement","Thyroid","Topical","Urological"];
+export const MEDICINE_CATEGORIES = ["Analgesic","Anthelmintic","Antibiotic","Antidiabetic","Antifungal","Antihistamine","Antihypertensive","Antiparasitic","Antiviral","Ayurvedic","CNS","Cardiac","Diuretic","First Aid","GI","Gynaecology","NSAID","Ophthalmic","Respiratory","Rheumatology","Statin","Steroid","Supplement","Thyroid","Topical","Urological"];

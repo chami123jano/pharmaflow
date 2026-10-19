@@ -6,21 +6,10 @@ import { useConfirm } from '../components/Confirm';
 import BulkImport from '../components/BulkImport';
 import BatchPanel from '../components/BatchPanel';
 import Select from '../components/Select';
+import { useCategories, type CatGroup } from '../lib/categories';
 import { ui, pill } from '../lib/ui';
 
 // Kept in step with the seed catalogue in src/main/data/medicines-lk.ts.
-/**
- * Categories, in two groups.
- *
- * A pharmacy counter sells more than medicine — milk powder, baby food,
- * soothers, Milo, cosmetics. With only medical groups to choose from those
- * ended up under "Supplement" or "Other", and the filter could not find them.
- * The two lists are kept apart so the dropdown reads as two short sections
- * rather than one wall of thirty-odd names.
- */
-const MEDICINE_CATS = ['Analgesic','Antibiotic','Antidiabetic','Antifungal','Antihistamine','Antihypertensive','Antiparasitic','Antiviral','Ayurvedic','Cardiac','CNS','Diuretic','First Aid','GI','Gynaecology','NSAID','Ophthalmic','Respiratory','Rheumatology','Statin','Steroid','Supplement','Thyroid','Topical','Urological'];
-const SHOP_CATS = ['Milk Powder','Baby Food','Baby Care','Beverages','Biscuits & Snacks','Cosmetics','Personal Care'];
-const CATS = ['All', ...MEDICINE_CATS, ...SHOP_CATS, 'Other'];
 
 /**
  * Options for the category dropdown, grouped and searchable. A product
@@ -28,16 +17,52 @@ const CATS = ['All', ...MEDICINE_CATS, ...SHOP_CATS, 'Other'];
  * its own option rather than the dropdown showing the first entry, which made
  * it look as if the category had changed.
  */
-function categoryOptions(current?: string) {
+const NEW_CAT = '__new_category__';
+
+function categoryOptions(current: string | undefined, medicine: string[], shop: string[], canAdd: boolean) {
   const opts = [
-    ...MEDICINE_CATS.map((c) => ({ value: c, label: c, group: 'Medicines' })),
-    ...SHOP_CATS.map((c) => ({ value: c, label: c, group: 'Shop items' })),
+    ...medicine.map((c) => ({ value: c, label: c, group: 'Medicines' })),
+    ...shop.map((c) => ({ value: c, label: c, group: 'Shop items' })),
     { value: 'Other', label: 'Other', group: 'Other' },
   ];
   if (current && !opts.some((o) => o.value === current)) {
     opts.unshift({ value: current, label: current, group: 'Current' });
   }
+  if (canAdd) opts.push({ value: NEW_CAT, label: '+ Add a new category', group: ' ' });
   return opts;
+}
+
+/** A category typed in on the spot, so adding an item never stops for a trip to Settings. */
+function NewCategory({ onAdd, onCancel, dark, defaultGroup }: {
+  onAdd: (name: string, group: CatGroup) => Promise<string | null>; onCancel: () => void; dark?: boolean; defaultGroup: CatGroup;
+}) {
+  const t = ui(dark);
+  const [name, setName] = useState('');
+  const [group, setGroup] = useState<CatGroup>(defaultGroup);
+  const [err, setErr] = useState('');
+  async function go() {
+    const e = await onAdd(name, group);
+    if (e) setErr(e);
+  }
+  return (
+    <div className={`col-span-2 -mt-1 ${t.well} p-3`}>
+      <div className="flex gap-2 items-center">
+        <input autoFocus className={t.input} placeholder="New category name" value={name}
+          onChange={(e) => { setName(e.target.value); setErr(''); }}
+          onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); go(); } if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); onCancel(); } }} />
+        <div role="radiogroup" aria-label="Group" className={`shrink-0 grid grid-cols-2 p-1 rounded-xl border ${dark ? 'bg-slate-800 border-slate-600' : 'bg-white border-slate-200'}`}>
+          {(['Medicines', 'Shop items'] as CatGroup[]).map((g) => (
+            <button key={g} type="button" role="radio" aria-checked={group === g} onClick={() => setGroup(g)}
+              className={`px-2.5 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap ${group === g
+                ? 'bg-teal-700 text-white' : dark ? 'text-slate-400' : 'text-slate-500'}`}>{g === 'Medicines' ? 'Medicine' : 'Shop item'}</button>
+          ))}
+        </div>
+        <button type="button" onClick={go} className={`${t.btnPrimary} shrink-0`}>Add</button>
+        <button type="button" onClick={onCancel} className={`${t.btnGhost} shrink-0 px-3`} aria-label="Cancel">✕</button>
+      </div>
+      {err && <p className="text-sm text-red-600 mt-1.5">{err}</p>}
+    </div>
+  );
 }
 
 /**
@@ -78,6 +103,18 @@ export default function Inventory({ user, tokens, darkMode }: { user: any; token
   const toast = useToast();
   const ask = useConfirm();
   const isAdmin = user?.role === 'admin';
+  const cats = useCategories();
+  const CATS = ['All', ...cats.medicine, ...cats.shop, 'Other'];
+  const [addingCat, setAddingCat] = useState(false);
+  async function addCategory(name: string, group: CatGroup) {
+    const err = await cats.add(name, group);
+    if (err) return err;
+    const nice = name.trim().replace(/\s+/g, ' ');
+    setForm((f: any) => ({ ...f, category: nice.charAt(0).toUpperCase() + nice.slice(1) }));
+    setAddingCat(false);
+    toast.success('Category added');
+    return null;
+  }
   const [products, setProducts]   = useState<any[]>([]);
   const [search, setSearch]       = useState('');
   const [cat, setCat]             = useState('All');
@@ -86,6 +123,7 @@ export default function Inventory({ user, tokens, darkMode }: { user: any; token
   const [selected, setSelected]   = useState<number>(-1);
   const [showAdd, setShowAdd]     = useState(false);
   const [showEdit, setShowEdit]   = useState<any>(null);
+  useEffect(() => { if (!showAdd && !showEdit) setAddingCat(false); }, [showAdd, showEdit]);
   const [showRestock, setRestock] = useState<any>(null);
   const [loading, setLoading]     = useState(false);
   const searchRef = useRef<HTMLInputElement>(null);
@@ -246,7 +284,7 @@ export default function Inventory({ user, tokens, darkMode }: { user: any; token
         <div className="flex gap-2 overflow-x-auto pb-0.5 -mb-0.5 [scrollbar-width:thin]">
           {CATS.map(c => (
             <span key={c} className="contents">
-            {c === SHOP_CATS[0] && <span className={`w-px self-stretch shrink-0 mx-1 ${dm ? 'bg-slate-600' : 'bg-slate-300'}`} aria-hidden="true" />}
+            {c === cats.shop[0] && <span className={`w-px self-stretch shrink-0 mx-1 ${dm ? 'bg-slate-600' : 'bg-slate-300'}`} aria-hidden="true" />}
             <button
               // The row scrolls sideways, and the shop categories sit past the
               // edge of the screen. Bring a chip fully into view when chosen,
@@ -343,7 +381,11 @@ export default function Inventory({ user, tokens, darkMode }: { user: any; token
               <div><label className={lbl}>SKU <button type="button" onClick={generateSku} className="ml-2 text-teal-600 hover:underline text-xs normal-case font-normal">Generate</button></label>
                 <input required className={inp} value={form.sku} onChange={e=>setForm(f=>({...f,sku:e.target.value.toUpperCase()}))} placeholder="LK-PARA-500" /></div>
               <div><label className={lbl}>Category</label>
-                <Select aria-label="Category" value={form.category} onChange={(v) => setForm(f => ({ ...f, category: v }))} options={categoryOptions(form.category)} /></div>
+                <Select aria-label="Category" value={form.category}
+                  onChange={(v) => { if (v === NEW_CAT) setAddingCat(true); else setForm(f => ({ ...f, category: v })); }}
+                  options={categoryOptions(form.category, cats.medicine, cats.shop, isAdmin)} /></div>
+              {addingCat && <NewCategory dark={dm} onAdd={addCategory} onCancel={() => setAddingCat(false)}
+                defaultGroup={cats.shop.includes(form.category) ? 'Shop items' : 'Medicines'} />}
               <div><label className={lbl}>Selling price (LKR) *</label>
                 <input required type="number" min="0" step="0.01" className={inp} value={form.price} onChange={e=>setForm(f=>({...f,price:e.target.value}))} /></div>
               {isAdmin && (
@@ -386,7 +428,11 @@ export default function Inventory({ user, tokens, darkMode }: { user: any; token
               <div><label className={lbl}>SKU</label>
                 <input required className={inp} value={form.sku} onChange={e=>setForm(f=>({...f,sku:e.target.value.toUpperCase()}))} /></div>
               <div><label className={lbl}>Category</label>
-                <Select aria-label="Category" value={form.category} onChange={(v) => setForm(f => ({ ...f, category: v }))} options={categoryOptions(form.category)} /></div>
+                <Select aria-label="Category" value={form.category}
+                  onChange={(v) => { if (v === NEW_CAT) setAddingCat(true); else setForm(f => ({ ...f, category: v })); }}
+                  options={categoryOptions(form.category, cats.medicine, cats.shop, isAdmin)} /></div>
+              {addingCat && <NewCategory dark={dm} onAdd={addCategory} onCancel={() => setAddingCat(false)}
+                defaultGroup={cats.shop.includes(form.category) ? 'Shop items' : 'Medicines'} />}
               <div><label className={lbl}>Selling price (LKR) *</label>
                 <input required type="number" min="0" step="0.01" className={inp} value={form.price} onChange={e=>setForm(f=>({...f,price:e.target.value}))} /></div>
               {isAdmin && (

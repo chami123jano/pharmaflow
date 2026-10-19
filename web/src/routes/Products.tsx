@@ -20,7 +20,7 @@ export interface Product {
 
 /** The till's categories, offered as suggestions so the spelling matches its filter. */
 const CATEGORY_SUGGESTIONS = [
-  'Analgesic','Antibiotic','Antidiabetic','Antifungal','Antihistamine','Antihypertensive','Antiparasitic',
+  'Analgesic','Anthelmintic','Antibiotic','Antidiabetic','Antifungal','Antihistamine','Antihypertensive','Antiparasitic',
   'Antiviral','Ayurvedic','Cardiac','CNS','Diuretic','First Aid','GI','Gynaecology','NSAID','Ophthalmic',
   'Respiratory','Rheumatology','Statin','Steroid','Supplement','Thyroid','Topical','Urological',
   'Milk Powder','Baby Food','Baby Care','Beverages','Biscuits & Snacks','Cosmetics','Personal Care','Other',
