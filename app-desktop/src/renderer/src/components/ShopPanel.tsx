@@ -99,7 +99,7 @@ export default function ShopPanel({ darkMode }: { darkMode?: boolean }) {
               type="button"
               onClick={() => { setDirty(true); setMark(m); }}
               className={`flex-1 flex items-center gap-3 p-3 rounded-xl border-2 transition text-left ${
-                mark === m ? 'border-blue-500 ring-2 ring-blue-500/25' : t.dark ? 'border-slate-700' : 'border-slate-200'
+                mark === m ? 'border-teal-600 ring-2 ring-teal-600/25' : t.dark ? 'border-slate-700' : 'border-slate-200'
               }`}
             >
               <Logo size={40} mark={m} className="shrink-0" />

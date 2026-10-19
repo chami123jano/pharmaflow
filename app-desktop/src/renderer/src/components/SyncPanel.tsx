@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useToast } from './Toast';
+import { useConfirm } from './Confirm';
 
 /**
  * Connects this machine to whichever transport carries its changes.
@@ -13,6 +14,7 @@ type Provider = 'github' | 'supabase';
 
 export default function SyncPanel({ darkMode }: { darkMode?: boolean }) {
   const toast = useToast();
+  const ask = useConfirm();
   const [status, setStatus] = useState<any>(null);
   const [tab, setTab] = useState<Provider>('supabase');
   const [repo, setRepo] = useState('');
@@ -128,7 +130,7 @@ export default function SyncPanel({ darkMode }: { darkMode?: boolean }) {
 
   async function disconnect() {
     const what = tab === 'supabase' ? 'the cloud' : 'the GitHub repository';
-    if (!confirm(`Disconnect this device from ${what}? Local data is not affected.`)) return;
+    if (!(await ask({ title: `Disconnect from ${what}?`, message: 'Nothing on this computer is deleted. You can connect again any time.', confirmLabel: 'Disconnect' }))) return;
     await window.api?.sync?.disconnect?.(tab === 'supabase' ? 'cloud' : 'github');
     setToken('');
     setCloudKey('');
@@ -137,10 +139,10 @@ export default function SyncPanel({ darkMode }: { darkMode?: boolean }) {
   }
 
   const dm = darkMode;
-  const card = `rounded-2xl border p-5 ${dm ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-100'}`;
-  const tp = dm ? 'text-gray-100' : 'text-gray-900';
-  const ts = dm ? 'text-gray-400' : 'text-gray-500';
-  const inp = `w-full px-3 py-2.5 rounded-lg border text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${dm ? 'bg-gray-700 border-gray-600 text-gray-100 placeholder-gray-400' : 'bg-white border-gray-300 text-gray-900'}`;
+  const card = `rounded-2xl border p-5 ${dm ? 'bg-slate-800 border-slate-700' : 'bg-white border-slate-100'}`;
+  const tp = dm ? 'text-slate-100' : 'text-slate-900';
+  const ts = dm ? 'text-slate-400' : 'text-slate-500';
+  const inp = `w-full px-3 py-2.5 rounded-lg border text-sm focus:outline-none focus:ring-2 focus:ring-teal-600/25 ${dm ? 'bg-slate-700 border-slate-600 text-slate-100 placeholder-slate-400' : 'bg-white border-slate-300 text-slate-900'}`;
   const lbl = `block text-xs font-semibold uppercase tracking-wide mb-1 ${ts}`;
 
   const thisTabConnected = tab === 'supabase' ? !!status?.cloudConfigured : !!(status?.owner && status?.repo && status?.hasToken);
@@ -151,14 +153,14 @@ export default function SyncPanel({ darkMode }: { darkMode?: boolean }) {
       onClick={() => pickTab(id)}
       className={`flex-1 text-left px-4 py-3 rounded-xl border transition ${
         tab === id
-          ? 'border-blue-500 ring-2 ring-blue-500/30 ' + (dm ? 'bg-gray-700' : 'bg-blue-50')
-          : dm ? 'border-gray-700 hover:border-gray-600' : 'border-gray-200 hover:border-gray-300'
+          ? 'border-teal-600 ring-2 ring-teal-600/30 ' + (dm ? 'bg-slate-700' : 'bg-teal-50')
+          : dm ? 'border-slate-700 hover:border-slate-600' : 'border-slate-200 hover:border-slate-300'
       }`}
     >
       <div className={`text-sm font-bold ${tp} flex items-center gap-2`}>
         {title}
         {status?.provider === id && status?.configured && (
-          <span className="px-1.5 py-0.5 rounded bg-green-100 text-green-700 text-[10px] font-bold uppercase">Active</span>
+          <span className="px-1.5 py-0.5 rounded bg-lime-100 text-lime-800 text-[10px] font-bold uppercase">Active</span>
         )}
       </div>
       <div className={`text-xs mt-0.5 ${ts}`}>{sub}</div>
@@ -170,7 +172,7 @@ export default function SyncPanel({ darkMode }: { darkMode?: boolean }) {
       <div className="flex items-start justify-between mb-1">
         <h2 className={`text-lg font-bold ${tp}`}>Sync</h2>
         {status?.configured && (
-          <span className="px-2 py-0.5 rounded-full bg-green-100 text-green-700 text-xs font-bold">Connected</span>
+          <span className="px-2 py-0.5 rounded-full bg-lime-100 text-lime-800 text-xs font-bold">Connected</span>
         )}
       </div>
       <p className={`text-sm mb-4 ${ts}`}>
@@ -197,7 +199,7 @@ export default function SyncPanel({ darkMode }: { darkMode?: boolean }) {
           </div>
           <div>
             <label className={lbl}>
-              service_role key {status?.hasCloudKey && <span className="normal-case font-normal text-green-600">— saved{status?.cloudKeyEncrypted ? ' and encrypted' : ''}</span>}
+              service_role key {status?.hasCloudKey && <span className="normal-case font-normal text-lime-700">— saved{status?.cloudKeyEncrypted ? ' and encrypted' : ''}</span>}
             </label>
             <input className={inp} type="password" value={cloudKey} onChange={(e) => setCloudKey(e.target.value)}
               placeholder={status?.hasCloudKey ? 'Leave blank to keep the saved key' : 'eyJhbGciOi…'} />
@@ -218,7 +220,7 @@ export default function SyncPanel({ darkMode }: { darkMode?: boolean }) {
           </div>
           <div>
             <label className={lbl}>
-              GitHub token {status?.hasToken && <span className="normal-case font-normal text-green-600">— saved{status?.tokenEncrypted ? ' and encrypted' : ''}</span>}
+              GitHub token {status?.hasToken && <span className="normal-case font-normal text-lime-700">— saved{status?.tokenEncrypted ? ' and encrypted' : ''}</span>}
             </label>
             <input className={inp} type="password" value={token} onChange={(e) => setToken(e.target.value)}
               placeholder={status?.hasToken ? 'Leave blank to keep the saved token' : 'ghp_… or github_pat_…'} />
@@ -234,11 +236,11 @@ export default function SyncPanel({ darkMode }: { darkMode?: boolean }) {
 
       <div className="flex flex-wrap gap-3 mt-4">
         <button onClick={tab === 'supabase' ? connectCloud : connectGithub} disabled={busy}
-          className="px-4 py-2.5 rounded-xl bg-blue-600 text-white text-sm font-bold hover:bg-blue-700 disabled:opacity-50">
+          className="px-4 py-2.5 rounded-xl bg-teal-700 text-white text-sm font-bold hover:bg-teal-800 disabled:opacity-50">
           {busy ? 'Checking…' : thisTabConnected ? 'Update connection' : 'Connect'}
         </button>
         <button onClick={runSync} disabled={syncing || !status?.configured || !active}
-          className="px-4 py-2.5 rounded-xl bg-green-600 text-white text-sm font-bold hover:bg-green-700 disabled:opacity-40">
+          className="px-4 py-2.5 rounded-xl bg-lime-700 text-white text-sm font-bold hover:bg-lime-800 disabled:opacity-40">
           {syncing ? 'Syncing…' : 'Sync now'}
         </button>
         {thisTabConnected && !active && (
@@ -249,7 +251,7 @@ export default function SyncPanel({ darkMode }: { darkMode?: boolean }) {
         )}
         {thisTabConnected && (
           <button onClick={disconnect}
-            className={`px-4 py-2.5 rounded-xl border text-sm font-medium ${dm ? 'border-gray-600 text-gray-300' : 'border-gray-300 text-gray-700'}`}>
+            className={`px-4 py-2.5 rounded-xl border text-sm font-medium ${dm ? 'border-slate-600 text-slate-300' : 'border-slate-300 text-slate-700'}`}>
             Disconnect
           </button>
         )}
@@ -269,7 +271,7 @@ export default function SyncPanel({ darkMode }: { darkMode?: boolean }) {
         </p>
       )}
 
-      <div className={`mt-5 pt-4 border-t ${dm ? 'border-gray-700' : 'border-gray-100'}`}>
+      <div className={`mt-5 pt-4 border-t ${dm ? 'border-slate-700' : 'border-slate-100'}`}>
         <h3 className={`text-sm font-bold ${tp}`}>No internet at the shop?</h3>
         <p className={`text-xs mt-0.5 mb-3 ${ts}`}>
           Send the same changes as a file — on a USB stick, or through a messaging app. Importing the
@@ -277,10 +279,10 @@ export default function SyncPanel({ darkMode }: { darkMode?: boolean }) {
         </p>
         <div className="flex flex-wrap gap-3">
           <button onClick={exportFile}
-            className={`px-4 py-2 rounded-xl border text-sm font-medium ${dm ? 'border-gray-600 text-gray-300' : 'border-gray-300 text-gray-700'}`}>
+            className={`px-4 py-2 rounded-xl border text-sm font-medium ${dm ? 'border-slate-600 text-slate-300' : 'border-slate-300 text-slate-700'}`}>
             Save changes to a file
           </button>
-          <label className={`px-4 py-2 rounded-xl border text-sm font-medium cursor-pointer ${dm ? 'border-gray-600 text-gray-300' : 'border-gray-300 text-gray-700'}`}>
+          <label className={`px-4 py-2 rounded-xl border text-sm font-medium cursor-pointer ${dm ? 'border-slate-600 text-slate-300' : 'border-slate-300 text-slate-700'}`}>
             Load a file from the other device
             <input type="file" accept=".jsonl,.json,.txt" onChange={importFile} className="hidden" />
           </label>
@@ -288,7 +290,7 @@ export default function SyncPanel({ darkMode }: { darkMode?: boolean }) {
       </div>
 
       {status && (
-        <div className={`mt-4 pt-4 border-t grid grid-cols-2 md:grid-cols-4 gap-3 text-sm ${dm ? 'border-gray-700' : 'border-gray-100'}`}>
+        <div className={`mt-4 pt-4 border-t grid grid-cols-2 md:grid-cols-4 gap-3 text-sm ${dm ? 'border-slate-700' : 'border-slate-100'}`}>
           <div>
             <div className={`text-xs ${ts}`}>Device id</div>
             <div className={`font-mono text-xs ${tp}`}>{status.deviceId}</div>

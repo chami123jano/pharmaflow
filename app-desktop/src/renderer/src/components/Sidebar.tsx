@@ -18,10 +18,10 @@ export default function Sidebar(){
       <div className="p-4 font-bold text-lg">{shop.name}</div>
       <nav className="flex-1 overflow-auto">
         {links.map(l => (
-          <NavLink key={l.to} to={l.to} className={({isActive})=> `block px-4 py-2 text-sm hover:bg-gray-100 ${isActive?'bg-gray-200 font-medium':''}`}>{l.label}</NavLink>
+          <NavLink key={l.to} to={l.to} className={({isActive})=> `block px-4 py-2 text-sm hover:bg-slate-100 ${isActive?'bg-slate-200 font-medium':''}`}>{l.label}</NavLink>
         ))}
       </nav>
-      <div className="p-4 text-xs text-gray-400">v0.1.0</div>
+      <div className="p-4 text-xs text-slate-400">v0.1.0</div>
     </aside>
   );
 }

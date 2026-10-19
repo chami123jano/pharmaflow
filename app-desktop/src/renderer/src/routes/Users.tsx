@@ -1,10 +1,13 @@
 import { useEffect, useState } from 'react';
+import Select from '../components/Select';
 import { useToast } from '../components/Toast';
+import { useConfirm } from '../components/Confirm';
 
 interface User { id: string; email: string; role: string; name?: string }
 
 export default function Users({ user: currentUser, darkMode }: { user?: any; tokens?: any; darkMode?: boolean; onUserChanged?: () => void }) {
   const toast = useToast();
+  const ask = useConfirm();
   const [users, setUsers]   = useState<User[]>([]);
   const [loading, setLoading] = useState(false);
   const [showAdd, setShowAdd] = useState(false);
@@ -51,7 +54,7 @@ export default function Users({ user: currentUser, darkMode }: { user?: any; tok
 
   async function handleDelete(u: User) {
     // Backend handles protection of system admin
-    if (!confirm(`Delete user "${u.username || u.email}"?\nThis cannot be undone.`)) return;
+    if (!(await ask({ title: `Delete ${u.username || u.email}?`, message: 'They will no longer be able to sign in. This cannot be undone.', tone: 'danger' }))) return;
     const res: any = await window.api?.auth?.delete?.(u.id);
     if (res?.ok) { toast.success('User deleted'); load(); }
     else toast.error(res?.error === 'LAST_ADMIN' ? 'Cannot delete the only admin' : (res?.error || 'Delete failed'));
@@ -63,11 +66,11 @@ export default function Users({ user: currentUser, darkMode }: { user?: any; tok
   }
 
   const dm = darkMode;
-  const card = `rounded-2xl border shadow-sm ${dm ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-100'}`;
-  const inp  = `w-full px-3 py-2.5 rounded-xl border text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${dm ? 'bg-gray-700 border-gray-600 text-gray-100 placeholder-gray-400' : 'bg-white border-gray-300 text-gray-900'}`;
-  const lbl  = `block text-xs font-semibold uppercase tracking-wide mb-1 ${dm ? 'text-gray-400' : 'text-gray-500'}`;
-  const tp   = dm ? 'text-gray-100' : 'text-gray-900';
-  const ts   = dm ? 'text-gray-400' : 'text-gray-500';
+  const card = `rounded-2xl border shadow-sm ${dm ? 'bg-slate-800 border-slate-700' : 'bg-white border-slate-100'}`;
+  const inp  = `w-full px-3 py-2.5 rounded-xl border text-sm focus:outline-none focus:ring-2 focus:ring-teal-600/25 ${dm ? 'bg-slate-700 border-slate-600 text-slate-100 placeholder-slate-400' : 'bg-white border-slate-300 text-slate-900'}`;
+  const lbl  = `block text-xs font-semibold uppercase tracking-wide mb-1 ${dm ? 'text-slate-400' : 'text-slate-500'}`;
+  const tp   = dm ? 'text-slate-100' : 'text-slate-900';
+  const ts   = dm ? 'text-slate-400' : 'text-slate-500';
 
   return (
     <div className="space-y-6">
@@ -79,7 +82,7 @@ export default function Users({ user: currentUser, darkMode }: { user?: any; tok
         </div>
         {currentUser?.role === 'admin' && (
           <button onClick={() => { setForm({ name:'', email:'', password:'', role:'clerk' }); setShowAdd(true); }}
-            className="px-4 py-2 bg-blue-600 text-white rounded-xl text-sm font-semibold hover:bg-blue-700">
+            className="px-4 py-2 bg-teal-700 text-white rounded-xl text-sm font-semibold hover:bg-teal-800">
             + Add User
           </button>
         )}
@@ -88,7 +91,7 @@ export default function Users({ user: currentUser, darkMode }: { user?: any; tok
       {/* User list */}
       <div className={`${card} overflow-hidden`}>
         <table className="w-full text-sm">
-          <thead className={`border-b ${dm ? 'border-gray-700 bg-gray-750' : 'border-gray-100 bg-gray-50'}`}>
+          <thead className={`border-b ${dm ? 'border-slate-700 bg-slate-750' : 'border-slate-100 bg-slate-50'}`}>
             <tr>
               <th className={`text-left px-5 py-3 text-xs font-semibold uppercase tracking-wide ${ts}`}>Name</th>
               <th className={`text-left px-5 py-3 text-xs font-semibold uppercase tracking-wide ${ts}`}>Username</th>
@@ -102,14 +105,14 @@ export default function Users({ user: currentUser, darkMode }: { user?: any; tok
             {users.length === 0 ? (
               <tr><td colSpan={4} className={`text-center py-10 ${ts}`}>No users found</td></tr>
             ) : users.map(u => (
-              <tr key={u.id} className={`border-b transition-colors ${dm ? 'border-gray-700 hover:bg-gray-700' : 'border-gray-50 hover:bg-gray-50'}`}>
+              <tr key={u.id} className={`border-b transition-colors ${dm ? 'border-slate-700 hover:bg-slate-700' : 'border-slate-50 hover:bg-slate-50'}`}>
                 <td className={`px-5 py-3.5 font-medium ${tp}`}>{u.name || '-'}</td>
                 <td className={`px-5 py-3.5 ${ts}`}>
                   <span className={`font-medium ${tp}`}>{u.username || '-'}</span>
                   {u.email && !u.email.endsWith('@local') && <span className="block text-xs opacity-70">{u.email}</span>}
                 </td>
                 <td className="px-5 py-3.5 text-center">
-                  <span className={`text-xs font-bold px-2.5 py-1 rounded-full ${u.role === 'admin' ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-600'}`}>
+                  <span className={`text-xs font-bold px-2.5 py-1 rounded-full ${u.role === 'admin' ? 'bg-teal-100 text-teal-700' : 'bg-slate-100 text-slate-600'}`}>
                     {u.role}
                   </span>
                 </td>
@@ -117,7 +120,7 @@ export default function Users({ user: currentUser, darkMode }: { user?: any; tok
                   <td className="px-5 py-3.5 text-right">
                     <div className="flex items-center justify-end gap-2">
                       <button onClick={() => openEdit(u)}
-                        className="px-3 py-1 text-xs bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 font-medium">
+                        className="px-3 py-1 text-xs bg-teal-100 text-teal-700 rounded-lg hover:bg-teal-200 font-medium">
                         Edit
                       </button>
                       {u.id !== currentUser?.id && (
@@ -138,7 +141,7 @@ export default function Users({ user: currentUser, darkMode }: { user?: any; tok
       {/* Add User Modal */}
       {showAdd && (
         <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
-          <div className={`rounded-2xl shadow-2xl w-full max-w-md ${dm ? 'bg-gray-800' : 'bg-white'} p-6`}>
+          <div className={`rounded-2xl shadow-2xl w-full max-w-md ${dm ? 'bg-slate-800' : 'bg-white'} p-6`}>
             <h3 className={`text-lg font-bold mb-5 ${tp}`}>Add New User</h3>
             <form onSubmit={handleCreate} className="space-y-4">
               <div><label className={lbl}>Display Name</label>
@@ -151,13 +154,13 @@ export default function Users({ user: currentUser, darkMode }: { user?: any; tok
               <div><label className={lbl}>Password * (min 4 chars)</label>
                 <input required type="password" className={inp} value={form.password} onChange={e=>setForm(f=>({...f,password:e.target.value}))} placeholder="Set a password" /></div>
               <div><label className={lbl}>Role</label>
-                <select className={inp} value={form.role} onChange={e=>setForm(f=>({...f,role:e.target.value}))}>
-                  <option value="clerk">Clerk (Sales + Inventory)</option>
-                  <option value="admin">Admin (Full Access)</option>
-                </select></div>
+                <Select aria-label="Role" value={form.role} onChange={(v) => setForm(f => ({ ...f, role: v }))} options={[
+                  { value: 'clerk', label: 'Clerk', hint: 'Sales and stock' },
+                  { value: 'admin', label: 'Admin', hint: 'Everything' },
+                ]} /></div>
               <div className="flex gap-3 pt-2">
-                <button type="button" onClick={()=>setShowAdd(false)} className={`flex-1 py-2.5 rounded-xl border ${dm?'border-gray-600 text-gray-300':'border-gray-300 text-gray-700'}`}>Cancel</button>
-                <button type="submit" disabled={loading} className="flex-1 py-2.5 rounded-xl bg-blue-600 text-white font-bold hover:bg-blue-700 disabled:opacity-50">
+                <button type="button" onClick={()=>setShowAdd(false)} className={`flex-1 py-2.5 rounded-xl border ${dm?'border-slate-600 text-slate-300':'border-slate-300 text-slate-700'}`}>Cancel</button>
+                <button type="submit" disabled={loading} className="flex-1 py-2.5 rounded-xl bg-teal-700 text-white font-bold hover:bg-teal-800 disabled:opacity-50">
                   {loading ? 'Creating...' : 'Create User'}
                 </button>
               </div>
@@ -169,17 +172,17 @@ export default function Users({ user: currentUser, darkMode }: { user?: any; tok
       {/* Edit User Modal */}
       {showEdit && (
         <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
-          <div className={`rounded-2xl shadow-2xl w-full max-w-md ${dm ? 'bg-gray-800' : 'bg-white'} p-6`}>
+          <div className={`rounded-2xl shadow-2xl w-full max-w-md ${dm ? 'bg-slate-800' : 'bg-white'} p-6`}>
             <h3 className={`text-lg font-bold mb-1 ${tp}`}>Edit User</h3>
             <p className={`text-sm mb-5 ${ts}`}>{showEdit.email}</p>
             <form onSubmit={handleEdit} className="space-y-4">
               <div><label className={lbl}>Display Name</label>
                 <input className={inp} value={editForm.name} onChange={e=>setEditForm(f=>({...f,name:e.target.value}))} placeholder="Full name" /></div>
               <div><label className={lbl}>Role</label>
-                <select className={inp} value={editForm.role} onChange={e=>setEditForm(f=>({...f,role:e.target.value}))}>
-                  <option value="clerk">Clerk</option>
-                  <option value="admin">Admin</option>
-                </select></div>
+                <Select aria-label="Role" value={editForm.role} onChange={(v) => setEditForm(f => ({ ...f, role: v }))} options={[
+                  { value: 'clerk', label: 'Clerk', hint: 'Sales and stock' },
+                  { value: 'admin', label: 'Admin', hint: 'Everything' },
+                ]} /></div>
               <div><label className={lbl}>New Password (leave blank to keep current)</label>
                 <input type="password" className={inp} value={editForm.password} onChange={e=>setEditForm(f=>({...f,password:e.target.value}))} placeholder="Leave blank to keep" /></div>
               <div><label className={lbl}>Username</label>
@@ -188,8 +191,8 @@ export default function Users({ user: currentUser, darkMode }: { user?: any; tok
               <div><label className={lbl}>Email</label>
                 <input type="email" className={inp} value={editForm.email} onChange={e=>setEditForm(f=>({...f,email:e.target.value}))} placeholder="name@example.com" /></div>
               <div className="flex gap-3 pt-2">
-                <button type="button" onClick={()=>setShowEdit(null)} className={`flex-1 py-2.5 rounded-xl border ${dm?'border-gray-600 text-gray-300':'border-gray-300 text-gray-700'}`}>Cancel</button>
-                <button type="submit" disabled={loading} className="flex-1 py-2.5 rounded-xl bg-blue-600 text-white font-bold hover:bg-blue-700 disabled:opacity-50">
+                <button type="button" onClick={()=>setShowEdit(null)} className={`flex-1 py-2.5 rounded-xl border ${dm?'border-slate-600 text-slate-300':'border-slate-300 text-slate-700'}`}>Cancel</button>
+                <button type="submit" disabled={loading} className="flex-1 py-2.5 rounded-xl bg-teal-700 text-white font-bold hover:bg-teal-800 disabled:opacity-50">
                   {loading ? 'Saving...' : 'Save Changes'}
                 </button>
               </div>

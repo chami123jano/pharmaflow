@@ -26,7 +26,7 @@ const ICONS: Record<ToastType, string> = {
   success: 'OK', error: '', info: 'ℹ', warning: '!',
 };
 const COLORS: Record<ToastType, string> = {
-  success: 'bg-green-600', error: 'bg-red-600', info: 'bg-blue-600', warning: 'bg-amber-500',
+  success: 'bg-lime-700', error: 'bg-red-600', info: 'bg-teal-700', warning: 'bg-amber-500',
 };
 
 export function ToastProvider({ children }: { children: React.ReactNode }) {

@@ -2,8 +2,10 @@ import { useState, useEffect, useRef } from 'react';
 import { formatLKR } from '../lib/format';
 import { useShortcuts } from '../hooks/useShortcuts';
 import { useToast } from '../components/Toast';
+import { useConfirm } from '../components/Confirm';
 import BulkImport from '../components/BulkImport';
 import BatchPanel from '../components/BatchPanel';
+import Select from '../components/Select';
 import { ui, pill } from '../lib/ui';
 
 // Kept in step with the seed catalogue in src/main/data/medicines-lk.ts.
@@ -21,24 +23,21 @@ const SHOP_CATS = ['Milk Powder','Baby Food','Baby Care','Beverages','Biscuits &
 const CATS = ['All', ...MEDICINE_CATS, ...SHOP_CATS, 'Other'];
 
 /**
- * The category dropdown. A product imported with a category outside these
- * lists keeps it — it is shown as an extra option rather than the select
- * silently displaying the first entry, which made it look as if it had changed.
+ * Options for the category dropdown, grouped and searchable. A product
+ * imported with a category outside these lists keeps it — it is offered as
+ * its own option rather than the dropdown showing the first entry, which made
+ * it look as if the category had changed.
  */
-function CategoryOptions({ current }: { current?: string }) {
-  const known = current && CATS.slice(1).includes(current);
-  return (
-    <>
-      {current && !known && <option value={current}>{current}</option>}
-      <optgroup label="Medicines">
-        {MEDICINE_CATS.map((c) => <option key={c}>{c}</option>)}
-      </optgroup>
-      <optgroup label="Shop items">
-        {SHOP_CATS.map((c) => <option key={c}>{c}</option>)}
-      </optgroup>
-      <option>Other</option>
-    </>
-  );
+function categoryOptions(current?: string) {
+  const opts = [
+    ...MEDICINE_CATS.map((c) => ({ value: c, label: c, group: 'Medicines' })),
+    ...SHOP_CATS.map((c) => ({ value: c, label: c, group: 'Shop items' })),
+    { value: 'Other', label: 'Other', group: 'Other' },
+  ];
+  if (current && !opts.some((o) => o.value === current)) {
+    opts.unshift({ value: current, label: current, group: 'Current' });
+  }
+  return opts;
 }
 
 function Badge({ stock }: { stock: number }) {
@@ -49,6 +48,7 @@ function Badge({ stock }: { stock: number }) {
 
 export default function Inventory({ user, tokens, darkMode }: { user: any; tokens?: any; darkMode?: boolean }) {
   const toast = useToast();
+  const ask = useConfirm();
   const [products, setProducts]   = useState<any[]>([]);
   const [search, setSearch]       = useState('');
   const [cat, setCat]             = useState('All');
@@ -119,7 +119,7 @@ export default function Inventory({ user, tokens, darkMode }: { user: any; token
   }
 
   async function handleDelete(p: any) {
-    if (!confirm(`Delete "${p.name}"? This cannot be undone.`)) return;
+    if (!(await ask({ title: `Delete ${p.name}?`, message: 'This cannot be undone.', tone: 'danger' }))) return;
     const res: any = await window.api?.products?.delete?.(p.id);
     if (res?.ok) { toast.success('Deleted'); fetchProducts(); }
     else toast.error(res?.error || 'Failed');
@@ -189,37 +189,37 @@ export default function Inventory({ user, tokens, darkMode }: { user: any; token
               placeholder="Search by name, brand, SKU, category... (Ctrl+F)"
               value={search}
               onChange={e => { setSearch(e.target.value); setPage(1); setSelected(-1); }}
-              className={`w-full px-4 py-3 pr-10 rounded-xl border-2 text-sm focus:outline-none focus:border-blue-500 transition-colors ${dm ? 'bg-gray-700 border-gray-600 text-gray-100 placeholder-gray-400' : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400'}`}
+              className={`w-full px-4 py-3 pr-10 rounded-xl border-2 text-sm focus:outline-none focus:border-teal-600 transition-colors ${dm ? 'bg-slate-700 border-slate-600 text-slate-100 placeholder-slate-400' : 'bg-white border-slate-300 text-slate-900 placeholder-slate-400'}`}
             />
             {search && (
               <button onClick={() => { setSearch(''); setPage(1); searchRef.current?.focus(); }}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 text-xl leading-none">
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 text-xl leading-none">
                 &times;
               </button>
             )}
           </div>
-          <select
-            value={stockFilter}
-            onChange={e => { setStock(e.target.value); setPage(1); }}
-            className={`px-4 py-3 rounded-xl border-2 text-sm focus:outline-none focus:border-blue-500 shrink-0 ${dm ? 'bg-gray-700 border-gray-600 text-gray-100' : 'bg-white border-gray-300 text-gray-900'}`}>
-            <option value="all">All Stock</option>
-            <option value="ok">In Stock</option>
-            <option value="low">Low (1-10)</option>
-            <option value="out">Out of Stock</option>
-          </select>
+          <div className="w-44 shrink-0">
+            <Select aria-label="Stock level" value={stockFilter} onChange={(v) => { setStock(v); setPage(1); }}
+              options={[
+                { value: 'all', label: 'All stock' },
+                { value: 'ok',  label: 'In stock' },
+                { value: 'low', label: 'Low (1–10)' },
+                { value: 'out', label: 'Out of stock' },
+              ]} />
+          </div>
         </div>
         {/* One line that scrolls sideways. Wrapping put 25 categories on two
             rows and cost the table four more products of height. */}
         <div className="flex gap-2 overflow-x-auto pb-0.5 -mb-0.5 [scrollbar-width:thin]">
           {CATS.map(c => (
             <span key={c} className="contents">
-            {c === SHOP_CATS[0] && <span className={`w-px self-stretch shrink-0 mx-1 ${dm ? 'bg-gray-600' : 'bg-gray-300'}`} aria-hidden="true" />}
+            {c === SHOP_CATS[0] && <span className={`w-px self-stretch shrink-0 mx-1 ${dm ? 'bg-slate-600' : 'bg-slate-300'}`} aria-hidden="true" />}
             <button
               // The row scrolls sideways, and the shop categories sit past the
               // edge of the screen. Bring a chip fully into view when chosen,
               // so the active filter is always visible.
               onClick={(e) => { setCat(c); setPage(1); e.currentTarget.scrollIntoView({ behavior: 'smooth', inline: 'nearest', block: 'nearest' }); }}
-              className={`px-3 py-1 rounded-full text-xs font-medium whitespace-nowrap shrink-0 transition-colors ${cat===c ? 'bg-blue-600 text-white' : dm ? 'bg-gray-700 text-gray-300 hover:bg-gray-600' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>
+              className={`px-3 py-1 rounded-full text-xs font-medium whitespace-nowrap shrink-0 transition-colors ${cat===c ? 'bg-teal-700 text-white' : dm ? 'bg-slate-700 text-slate-300 hover:bg-slate-600' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}>
               {c}
             </button>
             </span>
@@ -231,7 +231,7 @@ export default function Inventory({ user, tokens, darkMode }: { user: any; token
       <div className={`${tbg} border rounded-2xl overflow-hidden flex-1 min-h-0 flex flex-col`}>
         <div className="overflow-auto flex-1 min-h-0">
           <table className="w-full text-sm">
-            <thead className={`sticky top-0 z-10 border-b ${dm ? 'border-gray-700 bg-gray-800' : 'border-gray-100 bg-gray-50'}`}>
+            <thead className={`sticky top-0 z-10 border-b ${dm ? 'border-slate-700 bg-slate-800' : 'border-slate-100 bg-slate-50'}`}>
               <tr>
                 {['Name','SKU','Category','Price','Stock','Status','Expiry','Actions'].map(h => (
                   <th key={h} className={`text-left px-4 py-2.5 text-[11px] font-semibold uppercase tracking-wide ${ts}`}>{h}</th>
@@ -248,7 +248,7 @@ export default function Inventory({ user, tokens, darkMode }: { user: any; token
                 </td></tr>
               ) : paged.map((p, i) => (
                 <tr key={p.id} onClick={() => setSelected(i)}
-                  className={`border-b transition-colors cursor-pointer ${dm ? 'border-gray-700' : 'border-gray-50'} ${selected===i ? 'bg-blue-50 dark:bg-blue-900/20' : dm ? 'hover:bg-gray-700' : 'hover:bg-gray-50'}`}>
+                  className={`border-b transition-colors cursor-pointer ${dm ? 'border-slate-700' : 'border-slate-50'} ${selected===i ? 'bg-teal-50 dark:bg-teal-900/20' : dm ? 'hover:bg-slate-700' : 'hover:bg-slate-50'}`}>
                   <td className={`px-4 py-2 font-medium ${tp} max-w-64 truncate`}>
                     {p.name}
                     {p.generic_name && <span className={`block text-[11px] font-normal truncate ${ts}`}>{p.generic_name}</span>}
@@ -256,7 +256,7 @@ export default function Inventory({ user, tokens, darkMode }: { user: any; token
                   <td className={`px-4 py-2 font-mono text-xs ${ts}`}>{p.sku || '-'}</td>
                   <td className={`px-4 py-2 text-xs ${ts}`}>{p.category || '-'}</td>
                   {/* A price of zero is not good news, so it is not shown in green. */}
-                  <td className={`px-4 py-2 font-semibold tabular-nums ${Number(p.price) > 0 ? 'text-emerald-600' : 'text-amber-600'}`}>
+                  <td className={`px-4 py-2 font-semibold tabular-nums ${Number(p.price) > 0 ? 'text-lime-700' : 'text-amber-600'}`}>
                     {Number(p.price) > 0 ? formatLKR(p.price) : 'no price'}
                   </td>
                   <td className={`px-4 py-2 font-bold tabular-nums ${tp}`}>{p.stock}</td>
@@ -264,8 +264,8 @@ export default function Inventory({ user, tokens, darkMode }: { user: any; token
                   <td className={`px-4 py-2 text-xs tabular-nums ${ts}`}>{p.expiry ? p.expiry.slice(0,7) : '-'}</td>
                   <td className="px-4 py-2">
                     <div className="flex gap-1">
-                      <button onClick={e=>{e.stopPropagation();openEdit(p);}} className="px-2.5 py-1 text-xs bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 font-semibold">Edit</button>
-                      <button onClick={e=>{e.stopPropagation();setRestock(p);}} className="px-2.5 py-1 text-xs bg-emerald-100 text-emerald-700 rounded-lg hover:bg-emerald-200 font-semibold">Stock</button>
+                      <button onClick={e=>{e.stopPropagation();openEdit(p);}} className="px-2.5 py-1 text-xs bg-teal-100 text-teal-700 rounded-lg hover:bg-teal-200 font-semibold">Edit</button>
+                      <button onClick={e=>{e.stopPropagation();setRestock(p);}} className="px-2.5 py-1 text-xs bg-lime-100 text-lime-800 rounded-lg hover:bg-lime-200 font-semibold">Stock</button>
                       <button onClick={e=>{e.stopPropagation();handleDelete(p);}} className="px-2.5 py-1 text-xs bg-red-100 text-red-600 rounded-lg hover:bg-red-200 font-semibold">Del</button>
                     </div>
                   </td>
@@ -277,11 +277,11 @@ export default function Inventory({ user, tokens, darkMode }: { user: any; token
 
         {/* Pagination */}
         {totalPages > 1 && (
-          <div className={`shrink-0 flex items-center justify-between px-4 py-2.5 border-t ${dm ? 'border-gray-700' : 'border-gray-100'}`}>
+          <div className={`shrink-0 flex items-center justify-between px-4 py-2.5 border-t ${dm ? 'border-slate-700' : 'border-slate-100'}`}>
             <span className={`text-xs ${ts}`}>{filtered.length} products, page {page} of {totalPages}</span>
             <div className="flex gap-1">
-              <button onClick={() => setPage(p => Math.max(1, p-1))} disabled={page===1} className={`px-3 py-1 text-xs rounded-lg ${dm ? 'bg-gray-700 text-gray-300 disabled:opacity-40 hover:bg-gray-600' : 'bg-gray-100 text-gray-600 disabled:opacity-40 hover:bg-gray-200'}`}>Prev</button>
-              <button onClick={() => setPage(p => Math.min(totalPages, p+1))} disabled={page===totalPages} className={`px-3 py-1 text-xs rounded-lg ${dm ? 'bg-gray-700 text-gray-300 disabled:opacity-40 hover:bg-gray-600' : 'bg-gray-100 text-gray-600 disabled:opacity-40 hover:bg-gray-200'}`}>Next</button>
+              <button onClick={() => setPage(p => Math.max(1, p-1))} disabled={page===1} className={`px-3 py-1 text-xs rounded-lg ${dm ? 'bg-slate-700 text-slate-300 disabled:opacity-40 hover:bg-slate-600' : 'bg-slate-100 text-slate-600 disabled:opacity-40 hover:bg-slate-200'}`}>Prev</button>
+              <button onClick={() => setPage(p => Math.min(totalPages, p+1))} disabled={page===totalPages} className={`px-3 py-1 text-xs rounded-lg ${dm ? 'bg-slate-700 text-slate-300 disabled:opacity-40 hover:bg-slate-600' : 'bg-slate-100 text-slate-600 disabled:opacity-40 hover:bg-slate-200'}`}>Next</button>
             </div>
           </div>
         )}
@@ -290,7 +290,7 @@ export default function Inventory({ user, tokens, darkMode }: { user: any; token
       {/* Add Modal */}
       {showAdd && (
         <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
-          <div className={`rounded-2xl shadow-2xl w-full max-w-xl ${dm ? 'bg-gray-800' : 'bg-white'} p-6`}>
+          <div className={`rounded-2xl shadow-2xl w-full max-w-xl ${dm ? 'bg-slate-800' : 'bg-white'} p-6`}>
             <h3 className={`text-lg font-bold mb-5 ${tp}`}>Add New Product</h3>
             <form onSubmit={handleAdd} className="grid grid-cols-2 gap-4">
               <div className="col-span-2"><label className={lbl}>Product Name *</label>
@@ -299,12 +299,10 @@ export default function Inventory({ user, tokens, darkMode }: { user: any; token
                 <input className={inp} value={form.generic_name} onChange={e=>setForm(f=>({...f,generic_name:e.target.value}))} placeholder="Paracetamol" /></div>
               <div><label className={lbl}>Barcode</label>
                 <input className={inp} value={form.barcode} onChange={e=>setForm(f=>({...f,barcode:e.target.value}))} placeholder="Scan or type" /></div>
-              <div><label className={lbl}>SKU <button type="button" onClick={generateSku} className="ml-2 text-blue-500 hover:underline text-xs normal-case font-normal">Generate</button></label>
+              <div><label className={lbl}>SKU <button type="button" onClick={generateSku} className="ml-2 text-teal-600 hover:underline text-xs normal-case font-normal">Generate</button></label>
                 <input required className={inp} value={form.sku} onChange={e=>setForm(f=>({...f,sku:e.target.value.toUpperCase()}))} placeholder="LK-PARA-500" /></div>
               <div><label className={lbl}>Category</label>
-                <select className={inp} value={form.category} onChange={e=>setForm(f=>({...f,category:e.target.value}))}>
-                  <CategoryOptions current={form.category} />
-                </select></div>
+                <Select aria-label="Category" value={form.category} onChange={(v) => setForm(f => ({ ...f, category: v }))} options={categoryOptions(form.category)} /></div>
               <div><label className={lbl}>Price (LKR) *</label>
                 <input required type="number" min="0" step="0.01" className={inp} value={form.price} onChange={e=>setForm(f=>({...f,price:e.target.value}))} /></div>
               <div><label className={lbl}>Initial Stock</label>
@@ -318,8 +316,8 @@ export default function Inventory({ user, tokens, darkMode }: { user: any; token
                 Keep this form open to add another
               </label>
               <div className="col-span-2 flex gap-3 pt-2">
-                <button type="button" onClick={()=>setShowAdd(false)} className={`flex-1 py-2.5 rounded-xl border font-medium ${dm?'border-gray-600 text-gray-300 hover:bg-gray-700':'border-gray-300 text-gray-700 hover:bg-gray-50'}`}>Close (Esc)</button>
-                <button type="submit" disabled={loading} className="flex-1 py-2.5 rounded-xl bg-blue-600 text-white font-bold hover:bg-blue-700 disabled:opacity-50">Save (Enter)</button>
+                <button type="button" onClick={()=>setShowAdd(false)} className={`flex-1 py-2.5 rounded-xl border font-medium ${dm?'border-slate-600 text-slate-300 hover:bg-slate-700':'border-slate-300 text-slate-700 hover:bg-slate-50'}`}>Close (Esc)</button>
+                <button type="submit" disabled={loading} className="flex-1 py-2.5 rounded-xl bg-teal-700 text-white font-bold hover:bg-teal-800 disabled:opacity-50">Save (Enter)</button>
               </div>
             </form>
           </div>
@@ -329,7 +327,7 @@ export default function Inventory({ user, tokens, darkMode }: { user: any; token
       {/* Edit Modal */}
       {showEdit && (
         <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
-          <div className={`rounded-2xl shadow-2xl w-full max-w-xl ${dm ? 'bg-gray-800' : 'bg-white'} p-6`}>
+          <div className={`rounded-2xl shadow-2xl w-full max-w-xl ${dm ? 'bg-slate-800' : 'bg-white'} p-6`}>
             <h3 className={`text-lg font-bold mb-5 ${tp}`}>Edit Product</h3>
             <form onSubmit={handleEdit} className="grid grid-cols-2 gap-4">
               <div className="col-span-2"><label className={lbl}>Product Name *</label>
@@ -341,9 +339,7 @@ export default function Inventory({ user, tokens, darkMode }: { user: any; token
               <div><label className={lbl}>SKU</label>
                 <input required className={inp} value={form.sku} onChange={e=>setForm(f=>({...f,sku:e.target.value.toUpperCase()}))} /></div>
               <div><label className={lbl}>Category</label>
-                <select className={inp} value={form.category} onChange={e=>setForm(f=>({...f,category:e.target.value}))}>
-                  <CategoryOptions current={form.category} />
-                </select></div>
+                <Select aria-label="Category" value={form.category} onChange={(v) => setForm(f => ({ ...f, category: v }))} options={categoryOptions(form.category)} /></div>
               <div><label className={lbl}>Price (LKR) *</label>
                 <input required type="number" min="0" step="0.01" className={inp} value={form.price} onChange={e=>setForm(f=>({...f,price:e.target.value}))} /></div>
               <div>
@@ -355,7 +351,7 @@ export default function Inventory({ user, tokens, darkMode }: { user: any; token
                   <span className="font-bold">{showEdit?.stock ?? 0}</span>
                   <button type="button"
                     onClick={() => { const p = showEdit; setShowEdit(null); setRestock(p); }}
-                    className="ml-auto text-xs font-semibold text-blue-600 hover:underline">
+                    className="ml-auto text-xs font-semibold text-teal-700 hover:underline">
                     Add or adjust stock
                   </button>
                 </div>
@@ -365,8 +361,8 @@ export default function Inventory({ user, tokens, darkMode }: { user: any; token
               <div><label className={lbl}>Supplier</label>
                 <input className={inp} value={form.supplier} onChange={e=>setForm(f=>({...f,supplier:e.target.value}))} /></div>
               <div className="col-span-2 flex gap-3 pt-2">
-                <button type="button" onClick={()=>setShowEdit(null)} className={`flex-1 py-2.5 rounded-xl border font-medium ${dm?'border-gray-600 text-gray-300':'border-gray-300 text-gray-700'}`}>Cancel</button>
-                <button type="submit" disabled={loading} className="flex-1 py-2.5 rounded-xl bg-blue-600 text-white font-bold hover:bg-blue-700 disabled:opacity-50">Save Changes</button>
+                <button type="button" onClick={()=>setShowEdit(null)} className={`flex-1 py-2.5 rounded-xl border font-medium ${dm?'border-slate-600 text-slate-300':'border-slate-300 text-slate-700'}`}>Cancel</button>
+                <button type="submit" disabled={loading} className="flex-1 py-2.5 rounded-xl bg-teal-700 text-white font-bold hover:bg-teal-800 disabled:opacity-50">Save Changes</button>
               </div>
             </form>
           </div>

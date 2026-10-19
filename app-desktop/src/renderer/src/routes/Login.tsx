@@ -29,14 +29,14 @@ export default function Login({ onLogin }: { onLogin: (user: any, tokens: any) =
   }
 
   return (
-    <div className="fixed inset-0 z-40 bg-gradient-to-br from-blue-600 to-blue-800 flex items-center justify-center p-4 overflow-auto">
+    <div className="fixed inset-0 z-40 bg-gradient-to-br from-navy-800 to-navy-950 flex items-center justify-center p-4 overflow-auto">
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-8">
         {/* Logo */}
         <div className="text-center mb-8">
           <Logo size={72} mark={shop.mark} className="mx-auto mb-4 drop-shadow-md" />
-          <h1 className="text-2xl font-bold text-gray-900">{shop.name}</h1>
+          <h1 className="text-2xl font-bold text-slate-900">{shop.name}</h1>
           {(shop.address || shop.phone) && (
-            <p className="text-sm text-gray-500 mt-1">
+            <p className="text-sm text-slate-500 mt-1">
               {[shop.address, shop.phone && 'Tel: ' + shop.phone].filter(Boolean).join(' · ')}
             </p>
           )}
@@ -44,7 +44,7 @@ export default function Login({ onLogin }: { onLogin: (user: any, tokens: any) =
 
         <form onSubmit={handleLogin} className="space-y-5">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1.5">Username</label>
+            <label className="block text-sm font-medium text-slate-700 mb-1.5">Username</label>
             <input
               type="text"
               autoComplete="username"
@@ -52,7 +52,7 @@ export default function Login({ onLogin }: { onLogin: (user: any, tokens: any) =
               spellCheck={false}
               value={email}
               onChange={e => setEmail(e.target.value)}
-              className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900 bg-gray-50"
+              className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-teal-600/25 focus:border-transparent text-slate-900 bg-slate-50"
               placeholder="Your username"
               required
               autoFocus
@@ -60,12 +60,12 @@ export default function Login({ onLogin }: { onLogin: (user: any, tokens: any) =
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1.5">Password</label>
+            <label className="block text-sm font-medium text-slate-700 mb-1.5">Password</label>
             <input
               type="password"
               value={password}
               onChange={e => setPassword(e.target.value)}
-              className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900 bg-gray-50"
+              className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-teal-600/25 focus:border-transparent text-slate-900 bg-slate-50"
               placeholder="Enter your password"
               required
             />
@@ -80,13 +80,13 @@ export default function Login({ onLogin }: { onLogin: (user: any, tokens: any) =
           <button
             type="submit"
             disabled={loading}
-            className="w-full py-3 bg-blue-600 text-white rounded-xl font-semibold hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-base shadow-md"
+            className="w-full py-3 bg-teal-700 text-white rounded-xl font-semibold hover:bg-teal-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-base shadow-md"
           >
             {loading ? 'Signing in...' : 'Sign In'}
           </button>
         </form>
 
-        <p className="text-center text-xs text-gray-400 mt-6">Point of sale</p>
+        <p className="text-center text-xs text-slate-400 mt-6">Point of sale</p>
       </div>
     </div>
   );

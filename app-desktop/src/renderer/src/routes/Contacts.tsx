@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { formatLKR } from '../lib/format';
 import { useToast } from '../components/Toast';
+import { useConfirm } from '../components/Confirm';
 import { useShortcuts } from '../hooks/useShortcuts';
 import { ui, pill } from '../lib/ui';
 
@@ -15,6 +16,7 @@ const BLANK = { name: '', phone: '', email: '', address: '', contact_person: '',
  */
 export default function Contacts({ user, darkMode }: { user?: any; darkMode?: boolean }) {
   const toast = useToast();
+  const ask = useConfirm();
   const t = ui(darkMode);
 
   const [kind, setKind] = useState<Kind>('customers');
@@ -74,7 +76,7 @@ export default function Contacts({ user, darkMode }: { user?: any; darkMode?: bo
   }
 
   async function remove(row: any) {
-    if (!confirm(`Remove ${row.name}?`)) return;
+    if (!(await ask({ title: `Remove ${row.name}?`, confirmLabel: 'Remove', tone: 'danger' }))) return;
     const api: any = (window.api as any)[kind];
     const r = await api.delete(row.id);
     if (r?.ok) { toast.success('Removed'); setSelected(null); load(); }
@@ -107,7 +109,7 @@ export default function Contacts({ user, darkMode }: { user?: any; darkMode?: bo
         {(['customers', 'suppliers'] as Kind[]).map((k) => (
           <button key={k} onClick={() => { setKind(k); setSelected(null); setHistory(null); }}
             className={`px-4 py-2 rounded-xl text-sm font-semibold capitalize transition ${
-              kind === k ? 'bg-blue-600 text-white shadow-sm' : `${t.muted} hover:${t.page}`
+              kind === k ? 'bg-teal-700 text-white shadow-sm' : `${t.muted} ${t.dark ? 'hover:text-slate-100 hover:bg-slate-700/50' : 'hover:text-slate-900 hover:bg-slate-100'}`
             }`}>
             {k}
           </button>
@@ -149,7 +151,7 @@ export default function Contacts({ user, darkMode }: { user?: any; darkMode?: bo
                       <td className={`${t.td} ${t.muted} max-w-xs truncate`}>{r.address || '—'}</td>
                       <td className={`${t.td} text-right whitespace-nowrap`}>
                         <button onClick={(e) => { e.stopPropagation(); startEdit(r); }}
-                          className="px-2.5 py-1 rounded-lg text-xs font-semibold bg-blue-100 text-blue-700 hover:bg-blue-200">Edit</button>
+                          className="px-2.5 py-1 rounded-lg text-xs font-semibold bg-teal-100 text-teal-700 hover:bg-teal-200">Edit</button>
                         <button onClick={(e) => { e.stopPropagation(); remove(r); }}
                           className="ml-2 px-2.5 py-1 rounded-lg text-xs font-semibold bg-red-100 text-red-700 hover:bg-red-200">Remove</button>
                       </td>
@@ -183,7 +185,7 @@ export default function Contacts({ user, darkMode }: { user?: any; darkMode?: bo
                     </div>
                     <div>
                       <div className={`text-[11px] uppercase tracking-wider ${t.faint}`}>{isSup ? 'Bought' : 'Spent'}</div>
-                      <div className="text-2xl font-bold text-emerald-600">
+                      <div className="text-2xl font-bold text-lime-700">
                         {formatLKR((isSup ? history.totalValue : history.totalSpent) ?? 0)}
                       </div>
                     </div>

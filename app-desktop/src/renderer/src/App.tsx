@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import ErrorBoundary from './components/ErrorBoundary';
 import { ToastProvider } from './components/Toast';
+import { ConfirmProvider } from './components/Confirm';
 import KeyboardHelp from './components/KeyboardHelp';
 import { useShortcuts } from './hooks/useShortcuts';
 import Login from './routes/Login';
@@ -245,7 +246,9 @@ export default function App() {
   return (
     <ErrorBoundary>
       <ToastProvider>
-        <AppInner />
+        <ConfirmProvider>
+          <AppInner />
+        </ConfirmProvider>
       </ToastProvider>
     </ErrorBoundary>
   );

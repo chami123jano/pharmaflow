@@ -493,10 +493,10 @@ export default function Sales({ user, tokens, darkMode }: { user: any; tokens?: 
   /* ----------------------------------------------------------------- styles */
 
   const dm = darkMode;
-  const card = `rounded-2xl border ${dm ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'}`;
-  const tp = dm ? 'text-gray-100' : 'text-gray-900';
-  const ts = dm ? 'text-gray-400' : 'text-gray-500';
-  const inp = `w-full px-4 py-3 rounded-xl border-2 focus:outline-none focus:border-teal-600 transition ${dm ? 'bg-gray-700 border-gray-600 text-gray-100 placeholder-gray-400' : 'bg-white border-gray-300 text-gray-900'}`;
+  const card = `rounded-2xl border ${dm ? 'bg-slate-800 border-slate-700' : 'bg-white border-slate-200'}`;
+  const tp = dm ? 'text-slate-100' : 'text-slate-900';
+  const ts = dm ? 'text-slate-400' : 'text-slate-500';
+  const inp = `w-full px-4 py-3 rounded-xl border-2 focus:outline-none focus:border-teal-600 transition ${dm ? 'bg-slate-700 border-slate-600 text-slate-100 placeholder-slate-400' : 'bg-white border-slate-300 text-slate-900'}`;
 
   /**
    * The panel whose turn it is gets a ring and a lifted shadow; the others stay
@@ -511,7 +511,7 @@ export default function Sales({ user, tokens, darkMode }: { user: any; tokens?: 
 
   const Key = ({ k, label }: { k: string; label: string }) => (
     <span className="inline-flex items-center gap-1.5">
-      <kbd className={`px-1.5 py-0.5 rounded font-mono text-[11px] font-bold ${dm ? 'bg-gray-700 text-gray-200 border border-gray-600' : 'bg-gray-100 text-gray-700 border border-gray-300'}`}>{k}</kbd>
+      <kbd className={`px-1.5 py-0.5 rounded font-mono text-[11px] font-bold ${dm ? 'bg-slate-700 text-slate-200 border border-slate-600' : 'bg-slate-100 text-slate-700 border border-slate-300'}`}>{k}</kbd>
       <span className={`text-[11px] ${ts}`}>{label}</span>
     </span>
   );
@@ -537,15 +537,15 @@ export default function Sales({ user, tokens, darkMode }: { user: any; tokens?: 
                 <span className={`flex items-center gap-2 pl-2 pr-3 py-1.5 rounded-full text-xs font-bold transition ${
                   now ? 'bg-teal-700 text-white shadow-sm shadow-teal-700/30'
                   : passed ? (dm ? 'bg-lime-900/50 text-lime-300' : 'bg-lime-50 text-lime-800')
-                  : (dm ? 'bg-gray-700/60 text-gray-500' : 'bg-gray-100 text-gray-400')}`}>
+                  : (dm ? 'bg-slate-700/60 text-slate-500' : 'bg-slate-100 text-slate-400')}`}>
                   <span className={`w-5 h-5 rounded-full grid place-items-center text-[10px] ${
-                    now ? 'bg-white/25' : passed ? (dm ? 'bg-lime-400/20' : 'bg-lime-200/70') : (dm ? 'bg-gray-600' : 'bg-gray-200')}`}>
+                    now ? 'bg-white/25' : passed ? (dm ? 'bg-lime-400/20' : 'bg-lime-200/70') : (dm ? 'bg-slate-600' : 'bg-slate-200')}`}>
                     {passed ? '✓' : i + 1}
                   </span>
                   {stageLabel[st]}
                 </span>
                 {i < STAGES.length - 1 && (
-                  <span className={`w-4 h-px ${passed ? 'bg-lime-400' : dm ? 'bg-gray-700' : 'bg-gray-200'}`} />
+                  <span className={`w-4 h-px ${passed ? 'bg-lime-400' : dm ? 'bg-slate-700' : 'bg-slate-200'}`} />
                 )}
               </div>
             );
@@ -577,10 +577,10 @@ export default function Sales({ user, tokens, darkMode }: { user: any; tokens?: 
           </div>
 
           {search.trim() && results.length > 0 && stage === 'items' && (
-            <div className={`mt-3 rounded-xl border overflow-hidden ${dm ? 'bg-gray-700 border-gray-600' : 'bg-white border-gray-200'}`}>
+            <div className={`mt-3 rounded-xl border overflow-hidden ${dm ? 'bg-slate-700 border-slate-600' : 'bg-white border-slate-200'}`}>
               {results.map((p, i) => (
                 <div key={p.id} onClick={() => addToCart(p, parsed.qty)}
-                  className={`flex items-center justify-between px-4 py-2.5 cursor-pointer border-b last:border-0 ${i === resultIdx ? 'bg-teal-700 text-white' : dm ? 'hover:bg-gray-600 border-gray-700 text-gray-200' : 'hover:bg-teal-50 border-gray-50 text-gray-800'}`}>
+                  className={`flex items-center justify-between px-4 py-2.5 cursor-pointer border-b last:border-0 ${i === resultIdx ? 'bg-teal-700 text-white' : dm ? 'hover:bg-slate-600 border-slate-700 text-slate-200' : 'hover:bg-teal-50 border-slate-50 text-slate-800'}`}>
                   <div className="min-w-0">
                     <span className="font-semibold text-sm">{p.name}</span>
                     {p.generic_name && <span className={`ml-2 text-xs ${i === resultIdx ? 'text-teal-100' : ts}`}>{p.generic_name}</span>}
@@ -604,7 +604,7 @@ export default function Sales({ user, tokens, darkMode }: { user: any; tokens?: 
         {/* The bill takes whatever height is left, so a long one scrolls inside
             its own panel instead of pushing the total off the screen. */}
         <div className={`${card} shadow-sm flex-1 min-h-0 flex flex-col overflow-hidden`}>
-          <div className={`flex items-center justify-between gap-3 flex-wrap px-4 py-3 border-b ${dm ? 'border-gray-700' : 'border-gray-100'}`}>
+          <div className={`flex items-center justify-between gap-3 flex-wrap px-4 py-3 border-b ${dm ? 'border-slate-700' : 'border-slate-100'}`}>
             <h3 className={`text-sm font-bold ${tp}`}>Bill</h3>
             {cart.length > 0 && (
               <div className="flex flex-wrap gap-x-4 gap-y-1">
@@ -618,7 +618,7 @@ export default function Sales({ user, tokens, darkMode }: { user: any; tokens?: 
           {cart.length === 0 ? (
             <div className="flex-1 grid place-items-center px-6 py-10">
               <div className="text-center">
-                <div className={`mx-auto w-11 h-11 rounded-2xl grid place-items-center mb-3 ${dm ? 'bg-gray-700' : 'bg-gray-100'}`}>
+                <div className={`mx-auto w-11 h-11 rounded-2xl grid place-items-center mb-3 ${dm ? 'bg-slate-700' : 'bg-slate-100'}`}>
                   <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"
                        strokeLinecap="round" strokeLinejoin="round" className={ts} aria-hidden="true">
                     <path d="M4 2v20l2.5-1.5L9 22l2.5-1.5L14 22l2.5-1.5L19 22V2l-2.5 1.5L14 2l-2.5 1.5L9 2 6.5 3.5z"/>
@@ -632,8 +632,8 @@ export default function Sales({ user, tokens, darkMode }: { user: any; tokens?: 
           ) : (
             <div className="flex-1 min-h-0 overflow-y-auto">
               <table className="w-full text-sm">
-                <thead className={`sticky top-0 z-10 ${dm ? 'bg-gray-800' : 'bg-white'}`}>
-                  <tr className={`border-b text-[11px] uppercase tracking-wide ${dm ? 'border-gray-700 text-gray-500' : 'border-gray-100 text-gray-400'}`}>
+                <thead className={`sticky top-0 z-10 ${dm ? 'bg-slate-800' : 'bg-white'}`}>
+                  <tr className={`border-b text-[11px] uppercase tracking-wide ${dm ? 'border-slate-700 text-slate-500' : 'border-slate-100 text-slate-400'}`}>
                     <th className="text-left font-semibold px-4 py-2">Item</th>
                     <th className="text-center font-semibold py-2 w-24">Qty</th>
                     <th className="text-right font-semibold py-2 w-24">Price</th>
@@ -645,10 +645,10 @@ export default function Sales({ user, tokens, darkMode }: { user: any; tokens?: 
                   {cart.map((item, idx) => (
                     <tr key={item.product.id}
                       onClick={() => { setLineIdx(idx); focusSearch(); }}
-                      className={`border-b cursor-pointer transition-colors ${dm ? 'border-gray-700/70' : 'border-gray-50'} ${
+                      className={`border-b cursor-pointer transition-colors ${dm ? 'border-slate-700/70' : 'border-slate-50'} ${
                         qtyIdx === idx || lineIdx === idx
                           ? (dm ? 'bg-teal-900/40' : 'bg-teal-50')
-                          : (dm ? 'hover:bg-gray-700/40' : 'hover:bg-gray-50')
+                          : (dm ? 'hover:bg-slate-700/40' : 'hover:bg-slate-50')
                       }`}>
                       <td className={`px-4 py-2.5 font-medium ${tp}`}>{item.product.name}</td>
                       <td className="py-2.5 text-center">
@@ -659,11 +659,11 @@ export default function Sales({ user, tokens, darkMode }: { user: any; tokens?: 
                             onKeyDown={onQtyKey}
                             onBlur={() => commitQty(false)}
                             placeholder={String(item.qty)}
-                            className="w-20 px-2 py-1 text-center font-bold rounded-lg border-2 border-teal-600 focus:outline-none text-gray-900"
+                            className="w-20 px-2 py-1 text-center font-bold rounded-lg border-2 border-teal-600 focus:outline-none text-slate-900"
                           />
                         ) : (
                           <button onClick={() => { setQtyIdx(idx); setQtyDraft(''); setTimeout(() => qtyRef.current?.focus(), 20); }}
-                            className={`w-20 py-1 rounded-lg font-bold tabular-nums ${dm ? 'text-gray-100 hover:bg-gray-700' : 'text-gray-900 hover:bg-gray-100'}`}>
+                            className={`w-20 py-1 rounded-lg font-bold tabular-nums ${dm ? 'text-slate-100 hover:bg-slate-700' : 'text-slate-900 hover:bg-slate-100'}`}>
                             {item.qty}
                           </button>
                         )}
@@ -712,11 +712,19 @@ export default function Sales({ user, tokens, darkMode }: { user: any; tokens?: 
             <span className={`text-[11px] ${ts}`}>over {approvalLimit}% needs admin</span>
           </div>
           <div className="flex gap-2">
-            <select value={discType} onChange={(e) => { setDiscType(e.target.value as any); setApprovedBy(null); }}
-              className={`px-3 rounded-xl border-2 w-20 shrink-0 ${dm ? 'bg-gray-700 border-gray-600 text-gray-100' : 'bg-white border-gray-300'}`}>
-              <option value="percent">%</option>
-              <option value="fixed">Rs</option>
-            </select>
+            <div role="radiogroup" aria-label="Discount type"
+              className={`shrink-0 grid grid-cols-2 p-1 rounded-xl border ${dm ? 'bg-slate-800 border-slate-600' : 'bg-slate-100 border-slate-200'}`}>
+              {(['percent', 'fixed'] as const).map((t) => (
+                <button key={t} type="button" role="radio" aria-checked={discType === t}
+                  onClick={() => { setDiscType(t); setApprovedBy(null); }}
+                  className={`w-11 rounded-lg text-sm font-semibold transition ${
+                    discType === t
+                      ? (dm ? 'bg-slate-600 text-white shadow-sm' : 'bg-white text-slate-900 shadow-sm')
+                      : (dm ? 'text-slate-400 hover:text-slate-200' : 'text-slate-500 hover:text-slate-700')}`}>
+                  {t === 'percent' ? '%' : 'Rs'}
+                </button>
+              ))}
+            </div>
             <input ref={discRef} type="number" min={0} value={discVal || ''}
               onChange={(e) => { setDiscVal(Math.max(0, Number(e.target.value) || 0)); setApprovedBy(null); }}
               onKeyDown={onDiscountKey}
@@ -741,7 +749,7 @@ export default function Sales({ user, tokens, darkMode }: { user: any; tokens?: 
           <div className="grid grid-cols-2 gap-2">
             {(['CASH', 'CARD'] as const).map((m) => (
               <button key={m} onClick={() => { setPayMethod(m); setStage('payment'); }}
-                className={`py-2.5 rounded-xl text-sm font-bold border-2 transition ${payMethod === m ? (m === 'CASH' ? 'bg-lime-700 text-white border-lime-700 shadow-sm shadow-lime-700/30' : 'bg-navy-700 text-white border-navy-700 shadow-sm shadow-navy-700/30') : dm ? 'bg-gray-700 border-gray-600 text-gray-300 hover:border-gray-500' : 'bg-gray-50 border-gray-300 text-gray-700 hover:border-gray-400'}`}>
+                className={`py-2.5 rounded-xl text-sm font-bold border-2 transition ${payMethod === m ? (m === 'CASH' ? 'bg-lime-700 text-white border-lime-700 shadow-sm shadow-lime-700/30' : 'bg-navy-700 text-white border-navy-700 shadow-sm shadow-navy-700/30') : dm ? 'bg-slate-700 border-slate-600 text-slate-300 hover:border-slate-500' : 'bg-slate-50 border-slate-300 text-slate-700 hover:border-slate-400'}`}>
                 {m === 'CASH' ? 'Cash' : 'Card'}
               </button>
             ))}
@@ -762,7 +770,7 @@ export default function Sales({ user, tokens, darkMode }: { user: any; tokens?: 
             <div className="grid grid-cols-4 gap-2 mt-2">
               {tenderSuggestions(total).map((a) => (
                 <button key={a} data-suggest onClick={() => { setTender(a); setStage('cash'); setTimeout(() => cashRef.current?.focus(), 20); }}
-                  className={`py-1.5 text-xs rounded-lg font-bold tabular-nums transition ${dm ? 'bg-gray-700 text-gray-200 hover:bg-gray-600' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}>{a}</button>
+                  className={`py-1.5 text-xs rounded-lg font-bold tabular-nums transition ${dm ? 'bg-slate-700 text-slate-200 hover:bg-slate-600' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'}`}>{a}</button>
               ))}
             </div>
             {tender > 0 && (tender >= total ? (
@@ -800,9 +808,9 @@ export default function Sales({ user, tokens, darkMode }: { user: any; tokens?: 
 
         <div className="grid grid-cols-2 gap-2">
           <button onClick={holdBill} disabled={!cart.length}
-            className={`py-2 rounded-xl border text-sm font-medium disabled:opacity-40 transition ${dm ? 'bg-gray-700 border-gray-600 text-gray-300 hover:bg-gray-600' : 'bg-white border-gray-200 text-gray-700 hover:bg-gray-50'}`}>Hold · F3</button>
+            className={`py-2 rounded-xl border text-sm font-medium disabled:opacity-40 transition ${dm ? 'bg-slate-700 border-slate-600 text-slate-300 hover:bg-slate-600' : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50'}`}>Hold · F3</button>
           <button onClick={openHeld}
-            className={`py-2 rounded-xl border text-sm font-medium transition ${dm ? 'bg-gray-700 border-gray-600 text-gray-300 hover:bg-gray-600' : 'bg-white border-gray-200 text-gray-700 hover:bg-gray-50'}`}>
+            className={`py-2 rounded-xl border text-sm font-medium transition ${dm ? 'bg-slate-700 border-slate-600 text-slate-300 hover:bg-slate-600' : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50'}`}>
             Recall · F6 {heldBills.length > 0 && <span className="ml-1 px-1.5 rounded-full bg-orange-500 text-white text-xs">{heldBills.length}</span>}
           </button>
         </div>
@@ -811,7 +819,7 @@ export default function Sales({ user, tokens, darkMode }: { user: any; tokens?: 
       {/* Admin approval */}
       {askPassword && (
         <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
-          <div className={`rounded-2xl p-6 w-full max-w-sm shadow-2xl ${dm ? 'bg-gray-800' : 'bg-white'}`}>
+          <div className={`rounded-2xl p-6 w-full max-w-sm shadow-2xl ${dm ? 'bg-slate-800' : 'bg-white'}`}>
             <h3 className={`text-lg font-bold ${tp}`}>Admin approval</h3>
             <p className={`text-sm mt-1 mb-4 ${ts}`}>
               {discountPercent.toFixed(1)}% is above the {approvalLimit}% limit. Enter an admin password to allow it.
@@ -825,7 +833,7 @@ export default function Sales({ user, tokens, darkMode }: { user: any; tokens?: 
               placeholder="Admin password" className={inp} />
             <div className="flex gap-3 mt-4">
               <button onClick={cancelApproval}
-                className={`flex-1 py-2.5 rounded-xl border font-medium ${dm ? 'border-gray-600 text-gray-300' : 'border-gray-300 text-gray-700'}`}>
+                className={`flex-1 py-2.5 rounded-xl border font-medium ${dm ? 'border-slate-600 text-slate-300' : 'border-slate-300 text-slate-700'}`}>
                 No discount (Esc)
               </button>
               <button onClick={confirmApproval} disabled={checking}
@@ -841,12 +849,12 @@ export default function Sales({ user, tokens, darkMode }: { user: any; tokens?: 
       {done && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-40 p-4"
           onClick={() => { setDone(null); focusSearch(); }}>
-          <div className={`rounded-2xl p-8 text-center shadow-2xl ${dm ? 'bg-gray-800' : 'bg-white'}`}>
-            <div className="text-sm text-gray-500">Receipt #{done.receiptNo} · saved, printing</div>
+          <div className={`rounded-2xl p-8 text-center shadow-2xl ${dm ? 'bg-slate-800' : 'bg-white'}`}>
+            <div className="text-sm text-slate-500">Receipt #{done.receiptNo} · saved, printing</div>
             <div className={`text-2xl font-bold mt-1 ${tp}`}>{formatLKR(done.total)} {done.payment === 'CARD' ? 'by card' : 'cash'}</div>
             {done.payment === 'CASH' && (
               <>
-                <div className="mt-4 text-sm text-gray-500">Change to give</div>
+                <div className="mt-4 text-sm text-slate-500">Change to give</div>
                 <div className="text-5xl font-bold text-lime-700">{formatLKR(done.change)}</div>
               </>
             )}
@@ -859,15 +867,15 @@ export default function Sales({ user, tokens, darkMode }: { user: any; tokens?: 
       {showHeld && (
         <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4"
           onClick={(e) => { if (e.target === e.currentTarget) { setShowHeld(false); focusSearch(); } }}>
-          <div className={`rounded-2xl shadow-2xl w-full max-w-lg ${dm ? 'bg-gray-800' : 'bg-white'}`}>
-            <div className={`p-4 border-b ${dm ? 'border-gray-700' : 'border-gray-200'}`}>
+          <div className={`rounded-2xl shadow-2xl w-full max-w-lg ${dm ? 'bg-slate-800' : 'bg-white'}`}>
+            <div className={`p-4 border-b ${dm ? 'border-slate-700' : 'border-slate-200'}`}>
               <h3 className={`font-bold ${tp}`}>Held bills</h3>
               <p className={`text-xs mt-0.5 ${ts}`}>↑↓ to choose · Enter to recall · Esc to close</p>
             </div>
             <div className="max-h-80 overflow-y-auto">
               {heldBills.map((b, i) => (
                 <div key={b.id} onClick={() => recallBill(b.id)}
-                  className={`flex items-center justify-between px-4 py-3 cursor-pointer border-b last:border-0 ${i === heldIdx ? 'bg-teal-700 text-white' : dm ? 'border-gray-700 text-gray-200' : 'border-gray-100 text-gray-800'}`}>
+                  className={`flex items-center justify-between px-4 py-3 cursor-pointer border-b last:border-0 ${i === heldIdx ? 'bg-teal-700 text-white' : dm ? 'border-slate-700 text-slate-200' : 'border-slate-100 text-slate-800'}`}>
                   <div>
                     <div className="font-semibold text-sm">{b.label || 'Bill'}</div>
                     <div className={`text-xs ${i === heldIdx ? 'text-teal-100' : ts}`}>{b.item_count} line(s)</div>

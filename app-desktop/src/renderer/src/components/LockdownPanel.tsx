@@ -62,7 +62,7 @@ export default function LockdownPanel({ user, darkMode }: { user?: any; darkMode
       </div>
       <button
         onClick={() => onChange(!on)}
-        className={`shrink-0 w-14 h-8 rounded-full transition relative ${on ? 'bg-emerald-600' : t.dark ? 'bg-slate-600' : 'bg-slate-300'}`}
+        className={`shrink-0 w-14 h-8 rounded-full transition relative ${on ? 'bg-lime-700' : t.dark ? 'bg-slate-600' : 'bg-slate-300'}`}
         aria-pressed={on}
       >
         <span className={`absolute top-1 w-6 h-6 rounded-full bg-white shadow transition-all ${on ? 'left-7' : 'left-1'}`} />

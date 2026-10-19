@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { formatLKR, formatLKRShort } from '../lib/format';
+import Select from '../components/Select';
 
 const RANGES = [
   { value:'today', label:'Today' },
@@ -11,10 +12,10 @@ const RANGES = [
 
 function SummaryCard({ label, value, sub, color }: { label:string; value:string|number; sub?:string; color:string }) {
   return (
-    <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
-      <p className="text-sm text-gray-500 font-medium">{label}</p>
+    <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-6">
+      <p className="text-sm text-slate-500 font-medium">{label}</p>
       <p className={`text-2xl font-bold mt-1 ${color}`}>{value}</p>
-      {sub && <p className="text-xs text-gray-400 mt-1">{sub}</p>}
+      {sub && <p className="text-xs text-slate-400 mt-1">{sub}</p>}
     </div>
   );
 }
@@ -73,9 +74,9 @@ export default function Reports({ user, tokens, darkMode }: { user: any; tokens?
 
   const maxTrend = Math.max(...trend.map(d => d.value), 1);
   const dm = darkMode;
-  const card = `bg-white rounded-2xl border ${dm ? 'bg-gray-800 border-gray-700' : 'border-gray-100'} shadow-sm p-6`;
-  const tp = dm ? 'text-gray-100' : 'text-gray-900';
-  const ts = dm ? 'text-gray-400' : 'text-gray-500';
+  const card = `bg-white rounded-2xl border ${dm ? 'bg-slate-800 border-slate-700' : 'border-slate-100'} shadow-sm p-6`;
+  const tp = dm ? 'text-slate-100' : 'text-slate-900';
+  const ts = dm ? 'text-slate-400' : 'text-slate-500';
 
   return (
     <div className="space-y-6">
@@ -85,7 +86,7 @@ export default function Reports({ user, tokens, darkMode }: { user: any; tokens?
           <h1 className={`text-2xl font-bold ${tp}`}>Reports & Analytics</h1>
           <p className={`text-sm mt-0.5 ${ts}`}>Track your pharmacy performance and insights</p>
         </div>
-        <button onClick={exportCSV} className="px-4 py-2 bg-green-600 text-white rounded-xl text-sm font-semibold hover:bg-green-700 transition-colors shadow">
+        <button onClick={exportCSV} className="px-4 py-2 bg-lime-700 text-white rounded-xl text-sm font-semibold hover:bg-lime-800 transition-colors shadow">
           Export CSV
         </button>
       </div>
@@ -95,20 +96,17 @@ export default function Reports({ user, tokens, darkMode }: { user: any; tokens?
         <div className="grid grid-cols-2 gap-4">
           <div>
             <label className={`block text-xs font-semibold uppercase tracking-wide mb-1.5 ${ts}`}>Report Type</label>
-            <select value={reportType} onChange={e => setType(e.target.value)}
-              className={`w-full px-3 py-2.5 rounded-lg border text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${dm ? 'bg-gray-700 border-gray-600 text-gray-100' : 'bg-white border-gray-300 text-gray-900'}`}>
-              <option value="sales">Sales Report</option>
-              <option value="top">Top Products</option>
-              <option value="lowstock">Low Stock Report</option>
-              <option value="expiry">Near Expiry Report</option>
-            </select>
+            <Select aria-label="Report type" value={reportType} onChange={setType} options={[
+              { value: 'sales',    label: 'Sales report' },
+              { value: 'top',      label: 'Top products' },
+              { value: 'lowstock', label: 'Low stock' },
+              { value: 'expiry',   label: 'Near expiry' },
+            ]} />
           </div>
           <div>
             <label className={`block text-xs font-semibold uppercase tracking-wide mb-1.5 ${ts}`}>Date Range</label>
-            <select value={range} onChange={e => setRange(e.target.value)}
-              className={`w-full px-3 py-2.5 rounded-lg border text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${dm ? 'bg-gray-700 border-gray-600 text-gray-100' : 'bg-white border-gray-300 text-gray-900'}`}>
-              {RANGES.map(r => <option key={r.value} value={r.value}>{r.label}</option>)}
-            </select>
+            <Select aria-label="Date range" value={range} onChange={setRange}
+              options={RANGES.map(r => ({ value: r.value, label: r.label }))} />
           </div>
         </div>
       </div>
@@ -121,7 +119,7 @@ export default function Reports({ user, tokens, darkMode }: { user: any; tokens?
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
             {/* Takings is the figure being looked for, so it is the only one
                 in colour. Four different colours made them all shout equally. */}
-            <SummaryCard label="Total Sales" value={formatLKR(summary.totalSales ?? 0)} color="text-emerald-600" />
+            <SummaryCard label="Total Sales" value={formatLKR(summary.totalSales ?? 0)} color="text-lime-700" />
             <SummaryCard label="Transactions" value={summary.totalTransactions ?? 0} color={tp} />
             <SummaryCard label="Avg Transaction" value={formatLKR(summary.averageTransaction ?? 0)} color={tp} />
             <SummaryCard label="Total Discount" value={formatLKR(summary.totalDiscount ?? 0)}
@@ -142,7 +140,7 @@ export default function Reports({ user, tokens, darkMode }: { user: any; tokens?
                   {trend.map((d, i) => (
                     <div key={i} className="flex-1 max-w-[72px] flex flex-col items-center justify-end gap-1.5 h-full group relative">
                       <span className={`text-[10px] font-semibold ${ts}`}>{formatLKRShort(d.value)}</span>
-                      <div className="w-full bg-blue-500 rounded-t-lg transition-all hover:bg-blue-600"
+                      <div className="w-full bg-teal-700 rounded-t-lg transition-all hover:bg-teal-800"
                         style={{ height: `${Math.max(4, (d.value / maxTrend) * 100)}%` }}
                         title={`${d.date}: ${formatLKR(d.value)}`} />
                       <span className={`text-xs ${ts} truncate w-full text-center`}>{d.date?.slice(5)}</span>
@@ -157,16 +155,16 @@ export default function Reports({ user, tokens, darkMode }: { user: any; tokens?
               <h3 className={`text-sm font-semibold ${tp} mb-4`}>Daily Breakdown</h3>
               <div className="overflow-auto max-h-48">
                 <table className="w-full text-xs">
-                  <thead><tr className={`border-b ${dm ? 'border-gray-700' : 'border-gray-100'}`}>
+                  <thead><tr className={`border-b ${dm ? 'border-slate-700' : 'border-slate-100'}`}>
                     <th className={`text-left py-1.5 ${ts}`}>Date</th>
                     <th className={`text-right py-1.5 ${ts}`}>Sales</th>
                     <th className={`text-right py-1.5 ${ts}`}>Txns</th>
                   </tr></thead>
                   <tbody>
                     {trend.map((d, i) => (
-                      <tr key={i} className={`border-b ${dm ? 'border-gray-700' : 'border-gray-50'}`}>
+                      <tr key={i} className={`border-b ${dm ? 'border-slate-700' : 'border-slate-50'}`}>
                         <td className={`py-1.5 ${tp}`}>{d.date}</td>
-                        <td className={`py-1.5 text-right font-medium text-green-600`}>{formatLKR(d.value)}</td>
+                        <td className={`py-1.5 text-right font-medium text-lime-700`}>{formatLKR(d.value)}</td>
                         <td className={`py-1.5 text-right ${ts}`}>{d.transactions}</td>
                       </tr>
                     ))}
@@ -186,7 +184,7 @@ export default function Reports({ user, tokens, darkMode }: { user: any; tokens?
             <div className={`text-center py-8 ${ts} text-sm`}>No sales data in this period</div>
           ) : (
             <table className="w-full text-sm">
-              <thead><tr className={`border-b ${dm ? 'border-gray-700' : 'border-gray-100'}`}>
+              <thead><tr className={`border-b ${dm ? 'border-slate-700' : 'border-slate-100'}`}>
                 <th className={`text-left py-2 font-medium ${ts}`}>Product</th>
                 <th className={`text-center py-2 font-medium ${ts}`}>SKU</th>
                 <th className={`text-right py-2 font-medium ${ts}`}>Qty Sold</th>
@@ -194,11 +192,11 @@ export default function Reports({ user, tokens, darkMode }: { user: any; tokens?
               </tr></thead>
               <tbody>
                 {topProducts.map((p, i) => (
-                  <tr key={p.id} className={`border-b ${dm ? 'border-gray-700' : 'border-gray-50'}`}>
-                    <td className={`py-2 ${tp}`}><span className="inline-block w-6 h-6 rounded-full bg-blue-100 text-blue-600 text-xs font-bold text-center leading-6 mr-2">{i+1}</span>{p.name}</td>
+                  <tr key={p.id} className={`border-b ${dm ? 'border-slate-700' : 'border-slate-50'}`}>
+                    <td className={`py-2 ${tp}`}><span className="inline-block w-6 h-6 rounded-full bg-teal-100 text-teal-700 text-xs font-bold text-center leading-6 mr-2">{i+1}</span>{p.name}</td>
                     <td className={`py-2 text-center font-mono text-xs ${ts}`}>{p.sku}</td>
-                    <td className={`py-2 text-right font-bold text-blue-600`}>{p.total_qty}</td>
-                    <td className={`py-2 text-right font-bold text-green-600`}>{formatLKR(p.total_revenue)}</td>
+                    <td className={`py-2 text-right font-bold text-teal-700`}>{p.total_qty}</td>
+                    <td className={`py-2 text-right font-bold text-lime-700`}>{formatLKR(p.total_revenue)}</td>
                   </tr>
                 ))}
               </tbody>
@@ -212,10 +210,10 @@ export default function Reports({ user, tokens, darkMode }: { user: any; tokens?
         <div className={card}>
           <h3 className={`text-sm font-semibold ${tp} mb-4`}>Low Stock Products (10 units or less)</h3>
           {lowStock.length === 0 ? (
-            <div className={`text-center py-8 text-green-600 font-medium`}>All products well stocked!</div>
+            <div className={`text-center py-8 text-lime-700 font-medium`}>All products well stocked!</div>
           ) : (
             <table className="w-full text-sm">
-              <thead><tr className={`border-b ${dm ? 'border-gray-700' : 'border-gray-100'}`}>
+              <thead><tr className={`border-b ${dm ? 'border-slate-700' : 'border-slate-100'}`}>
                 <th className={`text-left py-2 font-medium ${ts}`}>Product</th>
                 <th className={`text-center py-2 font-medium ${ts}`}>SKU</th>
                 <th className={`text-center py-2 font-medium ${ts}`}>Category</th>
@@ -224,7 +222,7 @@ export default function Reports({ user, tokens, darkMode }: { user: any; tokens?
               </tr></thead>
               <tbody>
                 {lowStock.map(p => (
-                  <tr key={p.id} className={`border-b ${dm ? 'border-gray-700' : 'border-gray-50'}`}>
+                  <tr key={p.id} className={`border-b ${dm ? 'border-slate-700' : 'border-slate-50'}`}>
                     <td className={`py-2 font-medium ${tp}`}>{p.name}</td>
                     <td className={`py-2 text-center font-mono text-xs ${ts}`}>{p.sku}</td>
                     <td className={`py-2 text-center text-xs ${ts}`}>{p.category || '-'}</td>
@@ -247,10 +245,10 @@ export default function Reports({ user, tokens, darkMode }: { user: any; tokens?
         <div className={card}>
           <h3 className={`text-sm font-semibold ${tp} mb-4`}>Products Expiring Within 30 Days</h3>
           {nearExpiry.length === 0 ? (
-            <div className="text-center py-8 text-green-600 font-medium">No products expiring soon!</div>
+            <div className="text-center py-8 text-lime-700 font-medium">No products expiring soon!</div>
           ) : (
             <table className="w-full text-sm">
-              <thead><tr className={`border-b ${dm ? 'border-gray-700' : 'border-gray-100'}`}>
+              <thead><tr className={`border-b ${dm ? 'border-slate-700' : 'border-slate-100'}`}>
                 <th className={`text-left py-2 font-medium ${ts}`}>Product</th>
                 <th className={`text-center py-2 font-medium ${ts}`}>SKU</th>
                 <th className={`text-right py-2 font-medium ${ts}`}>Stock</th>
@@ -261,7 +259,7 @@ export default function Reports({ user, tokens, darkMode }: { user: any; tokens?
                 {nearExpiry.map(p => {
                   const days = Math.floor((new Date(p.expiry).getTime() - Date.now()) / 864e5);
                   return (
-                    <tr key={p.id} className={`border-b ${dm ? 'border-gray-700' : 'border-gray-50'}`}>
+                    <tr key={p.id} className={`border-b ${dm ? 'border-slate-700' : 'border-slate-50'}`}>
                       <td className={`py-2 font-medium ${tp}`}>{p.name}</td>
                       <td className={`py-2 text-center font-mono text-xs ${ts}`}>{p.sku}</td>
                       <td className={`py-2 text-right ${ts}`}>{p.stock}</td>

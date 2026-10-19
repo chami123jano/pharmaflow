@@ -19,12 +19,12 @@ const IconClock = () => svg(<><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 
 
 function StatCard({ label, value, sub, color, bg, icon }: Stat) {
   return (
-    <div className="bg-white rounded-2xl shadow-sm border border-gray-100 px-5 py-4 flex items-start gap-4 hover:shadow-md transition-shadow">
+    <div className="bg-white rounded-2xl shadow-sm border border-slate-100 px-5 py-4 flex items-start gap-4 hover:shadow-md transition-shadow">
       <div className={`w-12 h-12 rounded-xl ${bg} flex items-center justify-center ${color} shrink-0`}>{icon}</div>
       <div className="flex-1 min-w-0">
-        <p className="text-sm text-gray-500 font-medium">{label}</p>
+        <p className="text-sm text-slate-500 font-medium">{label}</p>
         <p className={`text-2xl font-bold mt-1 ${color}`}>{value}</p>
-        {sub && <p className="text-xs text-gray-400 mt-0.5">{sub}</p>}
+        {sub && <p className="text-xs text-slate-400 mt-0.5">{sub}</p>}
       </div>
     </div>
   );
@@ -98,33 +98,33 @@ export default function Dashboard({ user, tokens, onQuickNav, darkMode }: { user
   const maxTrend = Math.max(...week.map((d) => d.value), 1);
   const weekTotal = week.reduce((a, d) => a + d.value, 0);
   const dm = darkMode;
-  const pageBg = dm ? 'bg-gray-900' : 'bg-gray-50';
-  const cardBg = dm ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-100';
-  const textPrimary = dm ? 'text-gray-100' : 'text-gray-900';
-  const textSecondary = dm ? 'text-gray-400' : 'text-gray-500';
+  const pageBg = dm ? 'bg-slate-900' : 'bg-slate-50';
+  const cardBg = dm ? 'bg-slate-800 border-slate-700' : 'bg-white border-slate-100';
+  const textPrimary = dm ? 'text-slate-100' : 'text-slate-900';
+  const textSecondary = dm ? 'text-slate-400' : 'text-slate-500';
 
   return (
     <div className={`flex flex-col gap-4 lg:h-[calc(100vh-2.5rem)] ${pageBg}`}>
       {/* Welcome banner */}
       {/* A greeting and three shortcuts took a sixth of the screen. Same
           content, one row. */}
-      <div className="shrink-0 bg-gradient-to-r from-blue-600 to-blue-700 rounded-2xl px-5 py-3.5 text-white shadow-lg flex items-center justify-between gap-4 flex-wrap">
+      <div className="shrink-0 bg-gradient-to-r from-navy-800 to-navy-900 rounded-2xl px-5 py-3.5 text-white shadow-lg flex items-center justify-between gap-4 flex-wrap">
         <div>
           <h1 className="text-lg font-bold leading-tight">Welcome back, {user?.name || 'Admin'}</h1>
-          <p className="text-blue-100 text-xs">Here is what is happening at your pharmacy today.</p>
+          <p className="text-navy-100 text-xs">Here is what is happening at your pharmacy today.</p>
         </div>
         <div className="flex gap-2">
-          <button onClick={() => onQuickNav?.('sales')} className="px-3.5 py-2 bg-white text-blue-600 rounded-lg text-sm font-semibold hover:bg-blue-50 transition-colors">New Sale</button>
-          <button onClick={() => onQuickNav?.('inventory')} className="px-3.5 py-2 bg-blue-500 text-white rounded-lg text-sm font-semibold hover:bg-blue-400 transition-colors">Add Product</button>
-          <button onClick={() => onQuickNav?.('reports')} className="px-3.5 py-2 bg-blue-500 text-white rounded-lg text-sm font-semibold hover:bg-blue-400 transition-colors">Reports</button>
+          <button onClick={() => onQuickNav?.('sales')} className="px-3.5 py-2 bg-white text-teal-700 rounded-lg text-sm font-semibold hover:bg-teal-50 transition-colors">New Sale</button>
+          <button onClick={() => onQuickNav?.('inventory')} className="px-3.5 py-2 bg-teal-700 text-white rounded-lg text-sm font-semibold hover:bg-teal-600 transition-colors">Add Product</button>
+          <button onClick={() => onQuickNav?.('reports')} className="px-3.5 py-2 bg-teal-700 text-white rounded-lg text-sm font-semibold hover:bg-teal-600 transition-colors">Reports</button>
         </div>
       </div>
 
       {/* Stats */}
       <div className="shrink-0 grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatCard label="Total Products" value={stats.totalProducts ?? 0} icon={<IconBox />} color="text-blue-600" bg="bg-blue-50" />
+        <StatCard label="Total Products" value={stats.totalProducts ?? 0} icon={<IconBox />} color="text-teal-700" bg="bg-teal-50" />
         <StatCard label="Low Stock Items" value={stats.lowStock ?? 0} sub="Need reorder" icon={<IconAlert />} color="text-orange-600" bg="bg-orange-50" />
-        <StatCard label="Sales Today" value={formatLKR(stats.salesTotal ?? 0)} sub={`${stats.transactions ?? 0} transactions`} icon={<IconReceipt />} color="text-green-600" bg="bg-green-50" />
+        <StatCard label="Sales Today" value={formatLKR(stats.salesTotal ?? 0)} sub={`${stats.transactions ?? 0} transactions`} icon={<IconReceipt />} color="text-lime-700" bg="bg-lime-50" />
         <StatCard label="Expiring Soon" value={stats.nearExpiry ?? 0} sub="Within 30 days" icon={<IconClock />} color="text-red-600" bg="bg-red-50" />
       </div>
 
@@ -147,7 +147,7 @@ export default function Dashboard({ user, tokens, onQuickNav, darkMode }: { user
                   <div className={`w-full rounded-t-lg transition-all duration-500 ${
                     d.value === 0
                       ? (darkMode ? 'bg-slate-700/60' : 'bg-slate-100')
-                      : today ? 'bg-blue-600' : 'bg-blue-400'
+                      : today ? 'bg-teal-700' : 'bg-teal-600'
                   }`} style={{ height: d.value === 0 ? '4px' : `${Math.max(6, pct)}%` }} />
                   <span className={`text-[11px] ${today ? 'font-bold ' + textPrimary : textSecondary}`}>
                     {day.toLocaleDateString('en-GB', { weekday: 'short' })}
@@ -180,7 +180,7 @@ export default function Dashboard({ user, tokens, onQuickNav, darkMode }: { user
                     </span>
                   </div>
                 ))}
-                <button onClick={() => onQuickNav?.('inventory')} className="text-xs text-blue-600 hover:underline mt-1">View all</button>
+                <button onClick={() => onQuickNav?.('inventory')} className="text-xs text-teal-700 hover:underline mt-1">View all</button>
               </div>
             )}
           </div>
@@ -208,7 +208,7 @@ export default function Dashboard({ user, tokens, onQuickNav, darkMode }: { user
       <div className={`${cardBg} border rounded-2xl px-5 py-4 shadow-sm flex-1 min-h-0 flex flex-col`}>
         <div className="flex items-center justify-between mb-3 shrink-0">
           <h2 className={`text-base font-semibold ${textPrimary}`}>Recent Sales</h2>
-          <button onClick={() => onQuickNav?.('reports')} className="text-xs text-blue-600 hover:underline">View all</button>
+          <button onClick={() => onQuickNav?.('reports')} className="text-xs text-teal-700 hover:underline">View all</button>
         </div>
         {recent.length === 0 ? (
           <div className={`flex-1 grid place-items-center ${textSecondary} text-sm`}>No sales yet. Go to Sales to start billing.</div>
@@ -216,7 +216,7 @@ export default function Dashboard({ user, tokens, onQuickNav, darkMode }: { user
           <div className="overflow-auto flex-1 min-h-0">
             <table className="w-full text-sm">
               <thead>
-                <tr className={`border-b ${dm ? 'border-gray-700' : 'border-gray-100'}`}>
+                <tr className={`border-b ${dm ? 'border-slate-700' : 'border-slate-100'}`}>
                   <th className={`text-left py-2 font-medium ${textSecondary}`}>Receipt #</th>
                   <th className={`text-left py-2 font-medium ${textSecondary}`}>Date</th>
                   <th className={`text-left py-2 font-medium ${textSecondary}`}>Payment</th>
@@ -225,11 +225,16 @@ export default function Dashboard({ user, tokens, onQuickNav, darkMode }: { user
               </thead>
               <tbody>
                 {recent.map((s: any) => (
-                  <tr key={s.id} className={`border-b ${dm ? 'border-gray-700' : 'border-gray-50'} hover:${dm ? 'bg-gray-700' : 'bg-gray-50'}`}>
+                  <tr key={s.id} className={`border-b ${dm ? 'border-slate-700' : 'border-slate-50'} ${dm ? 'hover:bg-slate-700/50' : 'hover:bg-slate-50'}`}>
                     <td className={`py-2 font-mono text-xs ${textSecondary}`}>#{s.receipt_no || s.id?.slice(0, 8)}</td>
                     <td className={`py-2 text-xs ${textSecondary}`}>{new Date(s.created_at).toLocaleString('en-GB', { day:'2-digit', month:'short', hour:'2-digit', minute:'2-digit' })}</td>
-                    <td className="py-2"><span className={`text-xs px-2 py-0.5 rounded-full ${s.payment_method === 'cash' ? 'bg-green-100 text-green-700' : 'bg-blue-100 text-blue-700'}`}>{s.payment_method?.toUpperCase()}</span></td>
-                    <td className={`py-2 text-right font-semibold text-green-600`}>{formatLKR(s.total)}</td>
+                    <td className="py-2">
+                      {/* A voided bill is still shown — it happened — but must not read as money taken. */}
+                      {s.voided_at
+                        ? <span className="text-xs px-2 py-0.5 rounded-full font-medium bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300">VOIDED</span>
+                        : <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${s.payment_method === 'cash' ? 'bg-lime-100 text-lime-800' : 'bg-teal-100 text-teal-800'}`}>{s.payment_method?.toUpperCase()}</span>}
+                    </td>
+                    <td className={`py-2 text-right font-semibold ${s.voided_at ? `line-through ${textSecondary}` : (dm ? 'text-lime-400' : 'text-lime-700')}`}>{formatLKR(s.total)}</td>
                   </tr>
                 ))}
               </tbody>
