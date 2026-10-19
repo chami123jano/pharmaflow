@@ -18,6 +18,14 @@ export interface Product {
   expiry: string | null;
 }
 
+/** The till's categories, offered as suggestions so the spelling matches its filter. */
+const CATEGORY_SUGGESTIONS = [
+  'Analgesic','Antibiotic','Antidiabetic','Antifungal','Antihistamine','Antihypertensive','Antiparasitic',
+  'Antiviral','Ayurvedic','Cardiac','CNS','Diuretic','First Aid','GI','Gynaecology','NSAID','Ophthalmic',
+  'Respiratory','Rheumatology','Statin','Steroid','Supplement','Thyroid','Topical','Urological',
+  'Milk Powder','Baby Food','Baby Care','Beverages','Biscuits & Snacks','Cosmetics','Personal Care','Other',
+];
+
 const BLANK = {
   name: '', sku: '', generic_name: '', barcode: '',
   category: '', price: '', supplier: '', description: '',
@@ -210,7 +218,10 @@ function Editor({ product, onClose, onSaved }: { product: Product | null; onClos
         <Field label="Generic name" value={f.generic_name} onChange={set('generic_name')} placeholder="Paracetamol" />
         <div className="grid grid-cols-2 gap-3">
           <Field label="Price (Rs.)" value={f.price} onChange={set('price')} inputMode="decimal" placeholder="0.00" />
-          <Field label="Category" value={f.category} onChange={set('category')} placeholder="Analgesic" />
+          <Field label="Category" value={f.category} onChange={set('category')} placeholder="Analgesic" list="categories" />
+          <datalist id="categories">
+            {CATEGORY_SUGGESTIONS.map((c) => <option key={c} value={c} />)}
+          </datalist>
         </div>
         <div className="grid grid-cols-2 gap-3">
           <Field label="SKU" value={f.sku} onChange={set('sku')} placeholder="LK-ANA-PAN" />

@@ -7,7 +7,39 @@ import BatchPanel from '../components/BatchPanel';
 import { ui, pill } from '../lib/ui';
 
 // Kept in step with the seed catalogue in src/main/data/medicines-lk.ts.
-const CATS = ['All','Analgesic','Antibiotic','Antidiabetic','Antifungal','Antihistamine','Antihypertensive','Antiparasitic','Antiviral','Ayurvedic','Cardiac','CNS','Diuretic','First Aid','GI','Gynaecology','NSAID','Ophthalmic','Respiratory','Rheumatology','Statin','Steroid','Supplement','Thyroid','Topical','Urological','Other'];
+/**
+ * Categories, in two groups.
+ *
+ * A pharmacy counter sells more than medicine — milk powder, baby food,
+ * soothers, Milo, cosmetics. With only medical groups to choose from those
+ * ended up under "Supplement" or "Other", and the filter could not find them.
+ * The two lists are kept apart so the dropdown reads as two short sections
+ * rather than one wall of thirty-odd names.
+ */
+const MEDICINE_CATS = ['Analgesic','Antibiotic','Antidiabetic','Antifungal','Antihistamine','Antihypertensive','Antiparasitic','Antiviral','Ayurvedic','Cardiac','CNS','Diuretic','First Aid','GI','Gynaecology','NSAID','Ophthalmic','Respiratory','Rheumatology','Statin','Steroid','Supplement','Thyroid','Topical','Urological'];
+const SHOP_CATS = ['Milk Powder','Baby Food','Baby Care','Beverages','Biscuits & Snacks','Cosmetics','Personal Care'];
+const CATS = ['All', ...MEDICINE_CATS, ...SHOP_CATS, 'Other'];
+
+/**
+ * The category dropdown. A product imported with a category outside these
+ * lists keeps it — it is shown as an extra option rather than the select
+ * silently displaying the first entry, which made it look as if it had changed.
+ */
+function CategoryOptions({ current }: { current?: string }) {
+  const known = current && CATS.slice(1).includes(current);
+  return (
+    <>
+      {current && !known && <option value={current}>{current}</option>}
+      <optgroup label="Medicines">
+        {MEDICINE_CATS.map((c) => <option key={c}>{c}</option>)}
+      </optgroup>
+      <optgroup label="Shop items">
+        {SHOP_CATS.map((c) => <option key={c}>{c}</option>)}
+      </optgroup>
+      <option>Other</option>
+    </>
+  );
+}
 
 function Badge({ stock }: { stock: number }) {
   if (stock === 0) return <span className={pill('out')}>Out</span>;
@@ -180,10 +212,17 @@ export default function Inventory({ user, tokens, darkMode }: { user: any; token
             rows and cost the table four more products of height. */}
         <div className="flex gap-2 overflow-x-auto pb-0.5 -mb-0.5 [scrollbar-width:thin]">
           {CATS.map(c => (
-            <button key={c} onClick={() => { setCat(c); setPage(1); }}
+            <span key={c} className="contents">
+            {c === SHOP_CATS[0] && <span className={`w-px self-stretch shrink-0 mx-1 ${dm ? 'bg-gray-600' : 'bg-gray-300'}`} aria-hidden="true" />}
+            <button
+              // The row scrolls sideways, and the shop categories sit past the
+              // edge of the screen. Bring a chip fully into view when chosen,
+              // so the active filter is always visible.
+              onClick={(e) => { setCat(c); setPage(1); e.currentTarget.scrollIntoView({ behavior: 'smooth', inline: 'nearest', block: 'nearest' }); }}
               className={`px-3 py-1 rounded-full text-xs font-medium whitespace-nowrap shrink-0 transition-colors ${cat===c ? 'bg-blue-600 text-white' : dm ? 'bg-gray-700 text-gray-300 hover:bg-gray-600' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>
               {c}
             </button>
+            </span>
           ))}
         </div>
       </div>
@@ -264,7 +303,7 @@ export default function Inventory({ user, tokens, darkMode }: { user: any; token
                 <input required className={inp} value={form.sku} onChange={e=>setForm(f=>({...f,sku:e.target.value.toUpperCase()}))} placeholder="LK-PARA-500" /></div>
               <div><label className={lbl}>Category</label>
                 <select className={inp} value={form.category} onChange={e=>setForm(f=>({...f,category:e.target.value}))}>
-                  {CATS.slice(1).map(c => <option key={c}>{c}</option>)}
+                  <CategoryOptions current={form.category} />
                 </select></div>
               <div><label className={lbl}>Price (LKR) *</label>
                 <input required type="number" min="0" step="0.01" className={inp} value={form.price} onChange={e=>setForm(f=>({...f,price:e.target.value}))} /></div>
@@ -303,7 +342,7 @@ export default function Inventory({ user, tokens, darkMode }: { user: any; token
                 <input required className={inp} value={form.sku} onChange={e=>setForm(f=>({...f,sku:e.target.value.toUpperCase()}))} /></div>
               <div><label className={lbl}>Category</label>
                 <select className={inp} value={form.category} onChange={e=>setForm(f=>({...f,category:e.target.value}))}>
-                  {CATS.slice(1).map(c => <option key={c}>{c}</option>)}
+                  <CategoryOptions current={form.category} />
                 </select></div>
               <div><label className={lbl}>Price (LKR) *</label>
                 <input required type="number" min="0" step="0.01" className={inp} value={form.price} onChange={e=>setForm(f=>({...f,price:e.target.value}))} /></div>
