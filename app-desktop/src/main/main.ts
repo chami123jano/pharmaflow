@@ -30,6 +30,7 @@ import './ipc/grn.js';
 import './ipc/returns.js';
 import './ipc/cashup.js';
 import './ipc/bills.js';
+import { shareExistingOnce } from './ipc/categories.js';
 import './ipc/contacts.js';
 import './ipc/sync.js';
 import { getDeviceId } from './sync/events.js';
@@ -205,6 +206,7 @@ async function bootstrap() {
   await initDb();
   // Settle the device id now, while nothing else is mid-write.
   try { log.info('[App] device:', getDeviceId()); } catch {}
+  shareExistingOnce(getDb());
   log.info('[App] userData:', app.getPath('userData'));
   await createWindow();
   startAutoSync();

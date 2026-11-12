@@ -14,7 +14,12 @@ export default defineConfig({
   resolve: {
     // The regex has to match the whole specifier: Vite replaces only the part
     // that matched, so a partial match leaves the "../" stuck on the front.
-    alias: [{ find: /^\.{1,2}\/lib\/supabase$/, replacement: resolve(__dirname, 'src/__preview/stub.ts') }],
+    alias: [
+      { find: /^\.{1,2}\/lib\/supabase$/, replacement: resolve(__dirname, 'src/__preview/stub.ts') },
+      // lib/auth and lib/shop import it as './supabase'; stub that too, so the
+      // preview is signed in as the owner and shows the owner's buttons.
+      { find: /^\.\/supabase$/, replacement: resolve(__dirname, 'src/__preview/stub.ts') },
+    ],
   },
   server: { port: 5176 },
 });

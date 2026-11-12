@@ -50,6 +50,10 @@ export function generateUniqueSku(name?: string, category?: string): string {
   // Normalize prefix: uppercase, ensure ends with '-'
   prefix = prefix.toUpperCase().replace(/[^A-Z0-9-]/g, '');
   if (prefix && !prefix.endsWith('-')) prefix = prefix + '-';
+  // "W-" belongs to the website. Each place makes codes in its own range, so
+  // the till and the website can add items at the same time and never pick
+  // the same code.
+  if (prefix === 'W-') prefix = 'LK-';
   const baseFull = `${prefix}${base}`;
   // Try plain prefixed base if not taken
   const exists = db.prepare('SELECT 1 FROM products WHERE sku = ?').get(baseFull) as any;

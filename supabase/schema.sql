@@ -431,3 +431,8 @@ begin
     execute format('revoke all on %I from anon', t);
   end loop;
 end $$;
+
+-- ---------------------------------------------------------- categories ---
+-- The shop's own categories, written by the till with the shop row so the
+-- website's product form offers the same list as the till.
+alter table shop add column if not exists categories jsonb not null default '[]'::jsonb;

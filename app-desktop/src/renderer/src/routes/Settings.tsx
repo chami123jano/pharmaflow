@@ -222,7 +222,7 @@ export default function Settings({ user, darkMode }: { user?: any; tokens?: any;
 
       <div className="flex-1 min-h-0 overflow-y-auto -mx-1 px-1 pb-1">
         {tab === 'shop' && <ShopPanel darkMode={darkMode} />}
-        {tab === 'categories' && <CategoriesPanel darkMode={darkMode} />}
+        {tab === 'categories' && <CategoriesPanel darkMode={darkMode} user={user} />}
         {tab === 'lockdown' && <LockdownPanel user={user} darkMode={darkMode} />}
         {tab === 'sync' && <SyncPanel darkMode={darkMode} />}
 

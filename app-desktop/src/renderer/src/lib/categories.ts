@@ -10,9 +10,14 @@ import { useCallback, useEffect, useState } from 'react';
  * rather than one wall of thirty-odd names.
  *
  * The built-in names are fixed so every shop's data spells them the same way.
- * On top of those an admin can add the shop's own, stored in the
- * `categories.custom` setting. A product carries its category as text, so an
- * item keeps its category even if that name is later removed from the list.
+ * On top of those an admin can add the shop's own. Those are shared: adding
+ * or removing one here reaches the other PC and the website through sync, and
+ * one added on the website arrives here the same way. A product carries its
+ * category as text, so an item keeps its category even if that name is later
+ * removed from the list.
+ *
+ * The built-in lists are repeated in web/src/lib/categories.ts — keep the two
+ * in step.
  */
 export const MEDICINE_CATS = ['Analgesic','Anthelmintic','Antibiotic','Antidiabetic','Antifungal','Antihistamine','Antihypertensive','Antiparasitic','Antiviral','Ayurvedic','Cardiac','CNS','Diuretic','First Aid','GI','Gynaecology','NSAID','Ophthalmic','Respiratory','Rheumatology','Statin','Steroid','Supplement','Thyroid','Topical','Urological'];
 export const SHOP_CATS = ['Milk Powder','Baby Food','Baby Care','Beverages','Biscuits & Snacks','Cosmetics','Personal Care'];
@@ -20,7 +25,6 @@ export const SHOP_CATS = ['Milk Powder','Baby Food','Baby Care','Beverages','Bis
 export type CatGroup = 'Medicines' | 'Shop items';
 export interface CustomCat { name: string; group: CatGroup }
 
-const KEY = 'categories.custom';
 const RESERVED = ['all', 'other'];
 
 function parse(v: any): CustomCat[] {
@@ -35,12 +39,12 @@ function parse(v: any): CustomCat[] {
 
 const byName = (a: string, b: string) => a.localeCompare(b, 'en', { sensitivity: 'base' });
 
-export function useCategories() {
+export function useCategories(userId?: string) {
   const [custom, setCustom] = useState<CustomCat[]>([]);
 
   const load = useCallback(async () => {
-    const r: any = await (window as any).api?.settings?.get?.(KEY);
-    setCustom(parse(r?.value));
+    const r: any = await (window as any).api?.categories?.list?.();
+    setCustom(r?.ok ? parse(JSON.stringify(r.data)) : []);
   }, []);
 
   useEffect(() => {
@@ -53,9 +57,8 @@ export function useCategories() {
   const medicine = [...MEDICINE_CATS, ...custom.filter((c) => c.group === 'Medicines').map((c) => c.name)].sort(byName);
   const shop = [...SHOP_CATS, ...custom.filter((c) => c.group === 'Shop items').map((c) => c.name)].sort(byName);
 
-  async function save(next: CustomCat[]) {
-    await (window as any).api?.settings?.set?.(KEY, JSON.stringify(next));
-    setCustom(next);
+  function changed(list: any) {
+    setCustom(parse(JSON.stringify(list || [])));
     window.dispatchEvent(new CustomEvent('ph:data:changed', { detail: { area: 'categories' } }));
   }
 
@@ -69,12 +72,15 @@ export function useCategories() {
     const clash = [...medicine, ...shop].find((c) => c.toLowerCase() === lower);
     if (clash) return `"${clash}" is already a category`;
     const nice = name.charAt(0).toUpperCase() + name.slice(1);
-    await save([...custom, { name: nice, group }]);
+    const r: any = await (window as any).api?.categories?.add?.(nice, group, userId);
+    if (!r?.ok) return r?.message || 'Could not add the category';
+    changed(r.data);
     return null;
   }
 
   async function remove(name: string) {
-    await save(custom.filter((c) => c.name !== name));
+    const r: any = await (window as any).api?.categories?.remove?.(name, userId);
+    if (r?.ok) changed(r.data);
   }
 
   return { medicine, shop, custom, add, remove, isCustom: (n: string) => custom.some((c) => c.name === n) };

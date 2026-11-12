@@ -33,7 +33,7 @@ function referenceRows(db: any) {
  * build time. One row, always id 1.
  */
 function shopRow(db: any) {
-  const rows = db.prepare("SELECT key, value FROM settings WHERE key LIKE 'pharmacy.%'").all() as any[];
+  const rows = db.prepare("SELECT key, value FROM settings WHERE key LIKE 'pharmacy.%' OR key = 'categories.custom'").all() as any[];
   const m: Record<string, string> = Object.fromEntries(rows.map((r) => [r.key, String(r.value ?? '')]));
   const pick = (k: string) => (m['pharmacy.' + k] || '').trim() || null;
   return {
@@ -44,6 +44,7 @@ function shopRow(db: any) {
     regno: pick('regno'),
     footer: pick('footer'),
     logo: pick('logo'),
+    categories: (() => { try { return JSON.parse(m['categories.custom'] || '[]'); } catch { return []; } })(),
     updated_at: new Date().toISOString(),
   };
 }

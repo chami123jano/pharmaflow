@@ -103,7 +103,7 @@ export default function Inventory({ user, tokens, darkMode }: { user: any; token
   const toast = useToast();
   const ask = useConfirm();
   const isAdmin = user?.role === 'admin';
-  const cats = useCategories();
+  const cats = useCategories(user?.id);
   const CATS = ['All', ...cats.medicine, ...cats.shop, 'Other'];
   const [addingCat, setAddingCat] = useState(false);
   async function addCategory(name: string, group: CatGroup) {

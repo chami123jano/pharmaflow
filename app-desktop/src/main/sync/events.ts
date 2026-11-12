@@ -13,6 +13,7 @@
  *   - Every event carries a unique id and is applied at most once, so syncing
  *     twice is harmless.
  */
+import { addCategory, removeCategory } from '../ipc/categories.js';
 import { requestSync } from './auto.js';
 import { getDb } from '../db/index.js';
 import { randomUUID } from 'crypto';
@@ -21,7 +22,8 @@ import { recomputeStock } from '../db/batches.js';
 import { skuForIncoming } from '../db/sku.js';
 
 export type EventType = 'product.upsert' | 'product.delete' | 'stock.delta' | 'sale.created' | 'grn.created' | 'grn.voided' | 'sale.returned' | 'cashup.created'
-  | 'bill.created' | 'bill.paid' | 'bill.payment_voided' | 'bill.voided';
+  | 'bill.created' | 'bill.paid' | 'bill.payment_voided' | 'bill.voided'
+  | 'category.added' | 'category.removed';
 
 export interface SyncEvent {
   id: string;
@@ -306,6 +308,16 @@ export function applyEvent(ev: SyncEvent): string | null {
         .run(p.voided_at || ev.ts, p.void_reason ?? null, p.id);
       if (p.payments_voided) db.prepare('UPDATE supplier_payments SET voided_at = COALESCE(voided_at, ?) WHERE bill_id = ?').run(p.voided_at || ev.ts, p.id);
       refreshBillPaid(db, p.id);
+      break;
+    }
+
+    // Categories added or removed on another PC or on the website.
+    case 'category.added': {
+      if (p.name) addCategory(db, String(p.name), p.group === 'Shop items' ? 'Shop items' : 'Medicines');
+      break;
+    }
+    case 'category.removed': {
+      if (p.name) removeCategory(db, String(p.name));
       break;
     }
 

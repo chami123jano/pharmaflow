@@ -138,6 +138,22 @@ else **NULL** — never 0, which would report the whole sale as profit.
   `supabase/add-owner-pages.sql`; until it is run, `pushSnapshot` retries
   without the new columns and skips the new tables rather than failing.
 
+### Item codes and shared categories (`db/sku.ts`, `ipc/categories.ts`)
+
+- **Each place makes SKUs in its own range** so the till and the website can
+  add items at the same time without picking the same code: a PC uses its
+  `sku_prefix` setting (default `LK-`, set in Settings → Categories; a second
+  PC should get its own, e.g. `H-`), the website always `W-`
+  (`web/src/lib/categories.ts → makeWebSku`). `W-` is refused as a PC prefix.
+  The shape after the prefix is the same everywhere (`buildSkuBase`, repeated
+  in the web file — keep them in step). `skuForIncoming` keeps an incoming code
+  unless another item here already has it.
+- **Custom categories travel as events** `category.added` / `category.removed`
+  (merge-safe: concurrent adds both survive). The website adds by inserting a
+  `category.added` sync event as the owner; the till mirrors the list into the
+  `shop.categories` column the website reads. Built-in lists live in both
+  `renderer/src/lib/categories.ts` and `web/src/lib/categories.ts`.
+
 ### Supplier bills (`ipc/bills.ts`, `routes/SupplierBills.tsx`)
 
 - Every GRN with a priced total makes a `supplier_bills` row in the GRN's own

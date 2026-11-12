@@ -1,3 +1,4 @@
+import { useCategories, makeWebSku, skuOwner, type Group } from '../lib/categories';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { supabase } from '../lib/supabase';
 import { useAuth, canSeeMoney } from '../lib/auth';
@@ -18,13 +19,7 @@ export interface Product {
   expiry: string | null;
 }
 
-/** The till's categories, offered as suggestions so the spelling matches its filter. */
-const CATEGORY_SUGGESTIONS = [
-  'Analgesic','Anthelmintic','Antibiotic','Antidiabetic','Antifungal','Antihistamine','Antihypertensive','Antiparasitic',
-  'Antiviral','Ayurvedic','Cardiac','CNS','Diuretic','First Aid','GI','Gynaecology','NSAID','Ophthalmic',
-  'Respiratory','Rheumatology','Statin','Steroid','Supplement','Thyroid','Topical','Urological',
-  'Milk Powder','Baby Food','Baby Care','Beverages','Biscuits & Snacks','Cosmetics','Personal Care','Other',
-];
+
 
 const BLANK = {
   name: '', sku: '', generic_name: '', barcode: '',
@@ -154,6 +149,24 @@ function Editor({ product, onClose, onSaved }: { product: Product | null; onClos
   });
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
+  const cats = useCategories();
+  const [adding, setAdding] = useState(false);
+  const [newCat, setNewCat] = useState('');
+  const [newGroup, setNewGroup] = useState<Group>('Medicines');
+  const known = [...cats.medicine, ...cats.shop, 'Other'];
+
+  async function generate() {
+    setF((prev) => ({ ...prev, sku: '…' }));
+    const code = await makeWebSku(f.name, f.category);
+    setF((prev) => ({ ...prev, sku: code }));
+  }
+
+  async function addCategory() {
+    const e = await cats.add(newCat, newGroup);
+    if (e) { setErr(e); return; }
+    setF((prev) => ({ ...prev, category: newCat.trim().charAt(0).toUpperCase() + newCat.trim().slice(1) }));
+    setAdding(false); setNewCat(''); setErr(null);
+  }
 
   const set = (k: keyof typeof f) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) =>
     setF((prev) => ({ ...prev, [k]: e.target.value }));
@@ -167,11 +180,20 @@ function Editor({ product, onClose, onSaved }: { product: Product | null; onClos
     setBusy(true);
     setErr(null);
 
+    // A code like the till's, in the website's own "W-" range. A typed code
+    // is kept, but not if another item already has it.
+    let sku = f.sku.trim().toUpperCase();
+    if (!sku || sku === '…') sku = await makeWebSku(name, f.category);
+    else {
+      const owner = await skuOwner(sku, product?.id);
+      if (owner) { setBusy(false); setErr(`Code ${sku} is already used by ${owner}. Clear it to get a new one.`); return; }
+    }
+
     const now = new Date().toISOString();
     const id = product?.id ?? crypto.randomUUID();
     const payload = {
       id, name,
-      sku: f.sku.trim() || null,
+      sku,
       generic_name: f.generic_name.trim() || null,
       barcode: f.barcode.trim() || null,
       category: f.category.trim() || null,
@@ -218,13 +240,43 @@ function Editor({ product, onClose, onSaved }: { product: Product | null; onClos
         <Field label="Generic name" value={f.generic_name} onChange={set('generic_name')} placeholder="Paracetamol" />
         <div className="grid grid-cols-2 gap-3">
           <Field label="Price (Rs.)" value={f.price} onChange={set('price')} inputMode="decimal" placeholder="0.00" />
-          <Field label="Category" value={f.category} onChange={set('category')} placeholder="Analgesic" list="categories" />
-          <datalist id="categories">
-            {CATEGORY_SUGGESTIONS.map((c) => <option key={c} value={c} />)}
-          </datalist>
+          <label className="block">
+            <span className="faint mb-1.5 block text-[11px] font-bold uppercase tracking-wide">Category</span>
+            <select className="field" value={f.category}
+              onChange={(e) => { if (e.target.value === '__new__') setAdding(true); else setF((p) => ({ ...p, category: e.target.value })); }}>
+              <option value="">Choose…</option>
+              {f.category && !known.includes(f.category) && <option value={f.category}>{f.category}</option>}
+              <optgroup label="Medicines">{cats.medicine.map((c) => <option key={c} value={c}>{c}</option>)}</optgroup>
+              <optgroup label="Shop items">{cats.shop.map((c) => <option key={c} value={c}>{c}</option>)}</optgroup>
+              <option value="Other">Other</option>
+              <option value="__new__">+ Add a new category…</option>
+            </select>
+          </label>
         </div>
+        {adding && (
+          <div className="card space-y-2 p-3" style={{ background: 'var(--bg)' }}>
+            <input className="field" autoFocus placeholder="New category name" value={newCat}
+              onChange={(e) => setNewCat(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') addCategory(); }} />
+            <div className="flex gap-2">
+              {(['Medicines', 'Shop items'] as Group[]).map((g) => (
+                <button key={g} type="button" onClick={() => setNewGroup(g)}
+                  className={`flex-1 rounded-lg px-3 py-2 text-sm font-semibold ${newGroup === g ? 'bg-teal-700 text-white' : 'card muted'}`}>{g === 'Medicines' ? 'Medicine' : 'Shop item'}</button>
+              ))}
+            </div>
+            <div className="flex gap-2">
+              <button type="button" onClick={() => setAdding(false)} className="btn-ghost flex-1">Cancel</button>
+              <button type="button" onClick={addCategory} className="btn-primary flex-1">Add category</button>
+            </div>
+            <p className="faint text-xs">Shows here at once, and on the till after its next sync.</p>
+          </div>
+        )}
         <div className="grid grid-cols-2 gap-3">
-          <Field label="SKU" value={f.sku} onChange={set('sku')} placeholder="LK-ANA-PAN" />
+          <label className="block">
+            <span className="faint mb-1.5 flex justify-between text-[11px] font-bold uppercase tracking-wide">
+              SKU <button type="button" onClick={generate} className="normal-case text-teal-700 dark:text-teal-300">Generate</button>
+            </span>
+            <input className="field" value={f.sku} onChange={set('sku')} placeholder="Made for you if left blank" />
+          </label>
           <Field label="Barcode" value={f.barcode} onChange={set('barcode')} inputMode="numeric" />
         </div>
         <Field label="Supplier" value={f.supplier} onChange={set('supplier')} />

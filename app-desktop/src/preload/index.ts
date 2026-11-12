@@ -72,6 +72,15 @@ const api = {
     save:    (payload: any) => ipcRenderer.invoke('cashup:save', payload) as Promise<IpcResult>,
     list:    (limit?: number) => ipcRenderer.invoke('cashup:list', limit) as Promise<IpcResult>,
   },
+  categories: {
+    list:   () => ipcRenderer.invoke('categories:list') as Promise<IpcResult>,
+    add:    (name: string, group: string, userId?: string) => ipcRenderer.invoke('categories:add', name, group, userId) as Promise<IpcResult>,
+    remove: (name: string, userId?: string) => ipcRenderer.invoke('categories:remove', name, userId) as Promise<IpcResult>,
+  },
+  sku: {
+    prefix:    () => ipcRenderer.invoke('sku:prefix') as Promise<IpcResult>,
+    setPrefix: (letters: string, userId?: string) => ipcRenderer.invoke('sku:setPrefix', letters, userId) as Promise<IpcResult>,
+  },
   bills: {
     list:        (opts?: { status?: 'unpaid' | 'paid' | 'all'; supplier_id?: string; search?: string }) => ipcRenderer.invoke('bills:list', opts) as Promise<IpcResult>,
     summary:     () => ipcRenderer.invoke('bills:summary') as Promise<IpcResult>,

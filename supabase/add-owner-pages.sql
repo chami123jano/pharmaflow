@@ -1,4 +1,4 @@
--- Owner pages: profit, deliveries (GRNs), returns, cash-ups and supplier bills on the website.
+-- Owner pages: profit, deliveries (GRNs), returns, cash-ups, supplier bills and shared categories on the website.
 --
 -- Safe to run more than once. Run it once in the Supabase SQL editor; until
 -- then the till keeps syncing everything else and simply skips these.
@@ -156,3 +156,8 @@ begin
     execute format('revoke all on %I from anon', t);
   end loop;
 end $$;
+
+-- ---------------------------------------------------------- categories ---
+-- The shop's own categories, written by the till with the shop row so the
+-- website's product form offers the same list as the till.
+alter table shop add column if not exists categories jsonb not null default '[]'::jsonb;

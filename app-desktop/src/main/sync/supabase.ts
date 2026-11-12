@@ -166,7 +166,12 @@ export async function pushSnapshot(cfg: CloudConfig, snap: Snapshot): Promise<vo
    */
   if (snap.shop) {
     try {
-      await upsert(cfg, 'shop', [snap.shop]);
+      try { await upsert(cfg, 'shop', [snap.shop]); }
+      catch {
+        // Older cloud table without the categories column: send the rest.
+        const { categories, ...rest } = snap.shop;
+        await upsert(cfg, 'shop', [rest]);
+      }
     } catch (err: any) {
       log.warn('[cloud] shop details not mirrored:', err?.message || err,
                '- run the latest supabase/schema.sql to enable it');

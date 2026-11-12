@@ -11,12 +11,14 @@ import { ui } from '../lib/ui';
  * medicine list rely on their spelling. Removing an added one only takes it
  * off the list; items already in it keep it.
  */
-export default function CategoriesPanel({ darkMode }: { darkMode?: boolean }) {
+export default function CategoriesPanel({ darkMode, user }: { darkMode?: boolean; user?: any }) {
   const t = ui(darkMode);
   const dm = !!darkMode;
   const toast = useToast();
   const ask = useConfirm();
-  const cats = useCategories();
+  const cats = useCategories(user?.id);
+  const [prefix, setPrefix] = useState('');
+  const [prefixSaved, setPrefixSaved] = useState('');
   const [name, setName] = useState('');
   const [group, setGroup] = useState<CatGroup>('Medicines');
   const [err, setErr] = useState('');
@@ -24,6 +26,8 @@ export default function CategoriesPanel({ darkMode }: { darkMode?: boolean }) {
 
   useEffect(() => {
     (async () => {
+      const px: any = await (window as any).api?.sku?.prefix?.();
+      if (px?.ok) { setPrefix(px.data); setPrefixSaved(px.data); }
       const r: any = await (window as any).api?.products?.list?.();
       const m: Record<string, number> = {};
       for (const p of r?.data || []) if (p.category) m[p.category] = (m[p.category] || 0) + 1;
@@ -97,6 +101,26 @@ export default function CategoriesPanel({ darkMode }: { darkMode?: boolean }) {
         Shop items · {cats.shop.length}
       </h3>
       <div className="flex flex-wrap gap-2">{cats.shop.map((n) => <Chip key={n} n={n} />)}</div>
+
+      {/* Each place makes item codes in its own range, so the till and the
+          website can add items at the same time and never pick the same code. */}
+      <div className={`mt-6 pt-5 border-t ${t.border}`}>
+        <h3 className={`font-semibold ${t.page}`}>Item codes (SKU) made on this PC</h3>
+        <p className={`text-sm mt-0.5 ${t.muted}`}>
+          New items added here get codes starting <b className={t.page}>{(prefixSaved || 'LK')}-</b>; items added on the website start <b className={t.page}>W-</b>.
+          If you use a second PC, give it different letters (for example H for home) so the two never make the same code.
+        </p>
+        <div className="mt-3 flex gap-2 items-center">
+          <input className={`${t.input} !w-28 uppercase font-semibold`} maxLength={4} value={prefix} aria-label="Code letters for this PC"
+            onChange={(e) => setPrefix(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, ''))} />
+          <span className={t.muted}>-ANA-PAN50-500</span>
+          <button className={t.btnGhost} disabled={!prefix || prefix === prefixSaved} onClick={async () => {
+            const r: any = await (window as any).api?.sku?.setPrefix?.(prefix, user?.id);
+            if (r?.ok) { setPrefixSaved(r.data); toast.success(`New codes on this PC will start ${r.data}-`); }
+            else toast.error(r?.message || 'Could not save');
+          }}>Save</button>
+        </div>
+      </div>
 
       <p className={`mt-5 text-xs ${t.faint}`}>
         {MEDICINE_CATS.length + SHOP_CATS.length} built in · {cats.custom.length} added by you · "Other" is always there for anything that fits nowhere.

@@ -60,7 +60,7 @@ const BATCHES = [
   { id: 'b5', product_id: 'p5', batch_no: 'V-9', expiry: '2026-09-29', qty_remaining: 3 },
 ];
 
-const SHOP = [{ name: 'Chamindu Pharmacy', address: 'No. 12, Main Street, Kandy', phone: '0714438410', logo: 'capsule' }];
+const SHOP = [{ id: 1, categories: [{ name: 'Diabetic Care', group: 'Medicines' }], name: 'Chamindu Pharmacy', address: 'No. 12, Main Street, Kandy', phone: '0714438410', logo: 'capsule' }];
 const DEVICES = [{ last_seen_at: new Date(Date.now() - 4 * 60 * 1000).toISOString() }];
 
 // Owner pages: costs, a return, a cash-up and two deliveries.
@@ -93,6 +93,7 @@ function builder(table: string) {
     is: (col: string, val: any) => { rows = rows.filter((r) => r[col] === val); return self; },
     gte: (col: string, val: any) => { rows = rows.filter((r) => String(r[col]) >= String(val)); return self; },
     gt: (col: string, val: any) => { rows = rows.filter((r) => Number(r[col]) > Number(val)); return self; },
+    ilike: (col: string, pat: string) => { const p = pat.toLowerCase().replace(/%$/, ''); rows = rows.filter((r) => String(r[col] ?? '').toLowerCase().startsWith(p)); return self; },
     in: (col: string, vals: any[]) => { rows = rows.filter((r) => vals.includes(r[col])); return self; },
     order: (col: string, o: any) => {
       rows.sort((a, b) => String(a[col]).localeCompare(String(b[col])));
