@@ -30,16 +30,23 @@ ipcMain.handle('reports:lowStock', (_e, threshold = 10) => {
   return { ok: true, data: rows };
 });
 
+/**
+ * What is going out of date. Read from the deliveries (batches), which is where
+ * expiry dates actually live — a GRN line has its own date. The item's single
+ * `expiry` field was only ever typed once, on the Add form, so reading it
+ * missed everything received since.
+ */
 ipcMain.handle('reports:nearExpiry', (_e, days = 30) => {
   const db = getDb();
-  const now = Date.now();
-  const cutoff = now + Number(days || 30) * 24*60*60*1000;
-  const rows = db.prepare('SELECT id,name,sku,expiry,stock,category FROM products WHERE expiry IS NOT NULL').all() as any[];
-  const filtered = rows.filter(r => {
-    const t = Date.parse(r.expiry);
-    return !isNaN(t) && t <= cutoff;
-  }).sort((a,b) => Date.parse(a.expiry) - Date.parse(b.expiry));
-  return { ok: true, data: filtered };
+  const cutoff = new Date(Date.now() + Number(days || 30) * 864e5).toLocaleDateString('en-CA');
+  const rows = db.prepare(`
+    SELECT p.id, p.name, p.sku, p.category, p.stock,
+           MIN(b.expiry) AS expiry, SUM(b.qty_remaining) AS qty_expiring
+    FROM product_batches b JOIN products p ON p.id = b.product_id
+    WHERE b.qty_remaining > 0 AND b.expiry IS NOT NULL AND b.expiry <> '' AND substr(b.expiry,1,10) <= ?
+    GROUP BY p.id ORDER BY MIN(b.expiry) ASC
+  `).all(cutoff) as any[];
+  return { ok: true, data: rows };
 });
 
 ipcMain.handle('reports:salesTrend', (_e, range?: string, from?: string, to?: string) => {
@@ -58,6 +65,16 @@ ipcMain.handle('reports:salesTrend', (_e, range?: string, from?: string, to?: st
     cur.transactions += 1;
     byDay.set(day, cur);
   });
+  // Money given back comes off the day it left the drawer.
+  let rsql = 'SELECT r.refund_total, r.created_at FROM sale_returns r JOIN sales s ON s.id = r.sale_id WHERE s.voided_at IS NULL';
+  const rparams: any[] = [];
+  if (start && end) { rsql += ' AND r.created_at >= ? AND r.created_at <= ?'; rparams.push(start, end); }
+  for (const r of db.prepare(rsql).all(...rparams) as any[]) {
+    const day = r.created_at.slice(0,10);
+    const cur = byDay.get(day) || { amount: 0, transactions: 0 };
+    cur.amount -= Number(r.refund_total || 0);
+    byDay.set(day, cur);
+  }
   const trend = Array.from(byDay.entries())
     .sort((a,b) => a[0].localeCompare(b[0]))
     .map(([date, v]) => ({ date, value: v.amount, transactions: v.transactions }));
@@ -72,7 +89,10 @@ ipcMain.handle('reports:salesSummary', (_e, range?: string, from?: string, to?: 
     : 'WHERE voided_at IS NULL';
   const params: any[] = start && end ? [start, end] : [];
   const sales = db.prepare(`SELECT id, total, discount_amount FROM sales ${where}`).all(...params) as any[];
-  const totalSales = sales.reduce((s,r) => s + Number(r.total||0), 0);
+  const refundWhere = start && end ? 'AND r.created_at >= ? AND r.created_at <= ?' : '';
+  const totalRefunds = Number((db.prepare(`SELECT COALESCE(SUM(r.refund_total),0) AS n FROM sale_returns r JOIN sales s ON s.id = r.sale_id
+    WHERE s.voided_at IS NULL ${refundWhere}`).get(...params) as any)?.n || 0);
+  const totalSales = sales.reduce((s,r) => s + Number(r.total||0), 0) - totalRefunds;
   const totalDiscount = sales.reduce((s,r) => s + Number(r.discount_amount||0), 0);
   const totalTransactions = sales.length;
   const averageTransaction = totalTransactions ? totalSales / totalTransactions : 0;
@@ -90,7 +110,7 @@ ipcMain.handle('reports:salesSummary', (_e, range?: string, from?: string, to?: 
   `).all(...params) as any[];
 
   const topProduct = topRows.length ? `${topRows[0].name} (${Number(topRows[0].qty)})` : '-';
-  return { ok: true, data: { totalSales, totalDiscount, totalTransactions, averageTransaction, topProduct, topProducts: topRows } };
+  return { ok: true, data: { totalSales, totalDiscount, totalRefunds, totalTransactions, averageTransaction, topProduct, topProducts: topRows } };
 });
 
 ipcMain.handle('reports:salesDetail', (_e, range?: string, from?: string, to?: string) => {
@@ -229,6 +249,41 @@ export function profitReport(db: any, start?: string, end?: string) {
     byDay.set(day, d); byItem.set(r.product_id, it);
   }
 
+  // Returns, on the day the money went back. Units put back on the shelf
+  // return their cost too; units thrown away do not — that cost is lost.
+  const retWhere = start && end
+    ? 'WHERE s.voided_at IS NULL AND r.created_at >= ? AND r.created_at <= ?'
+    : 'WHERE s.voided_at IS NULL';
+  const rets = db.prepare(`
+    SELECT ri.product_id, ri.qty, ri.refund, ri.unit_cost, ri.restocked, r.created_at,
+           COALESCE(ri.product_name, p.name, 'Item') AS name, p.sku, p.category, p.cost_price AS product_cost
+    FROM sale_return_items ri JOIN sale_returns r ON r.id = ri.return_id
+    JOIN sales s ON s.id = r.sale_id LEFT JOIN products p ON p.id = ri.product_id
+    ${retWhere}
+  `).all(...params) as any[];
+  let refunds = 0;
+  for (const x of rets) {
+    const refund = Number(x.refund || 0);
+    refunds += refund;
+    const unit = x.unit_cost != null ? Number(x.unit_cost) : (x.product_cost != null ? Number(x.product_cost) : null);
+    const costBack = x.restocked && unit != null ? unit * Number(x.qty || 0) : 0;
+    totals.revenue -= refund;
+    const day = localDay(x.created_at);
+    const d = byDay.get(day) || { date: day, revenue: 0, cost: 0, profit: 0, costedRevenue: 0, sales: new Set<string>() };
+    d.revenue -= refund;
+    const it = byItem.get(x.product_id) || { product_id: x.product_id, name: x.name, sku: x.sku, category: x.category,
+      qty: 0, revenue: 0, cost: 0, profit: 0, costedRevenue: 0, uncostedQty: 0 };
+    it.revenue -= refund;
+    if (x.restocked) it.qty -= Number(x.qty || 0);
+    if (unit == null) { totals.uncostedRevenue -= refund; }
+    else {
+      totals.costed -= refund; totals.cost -= costBack;
+      d.costedRevenue -= refund; d.cost -= costBack;
+      it.costedRevenue -= refund; it.cost -= costBack;
+    }
+    byDay.set(day, d); byItem.set(x.product_id, it);
+  }
+
   const margin = (profit: number, rev: number) => (rev > 0 ? r2((profit / rev) * 100) : null);
   totals.sales = saleIds.size;
   totals.profit = totals.costed - totals.cost;
@@ -238,6 +293,7 @@ export function profitReport(db: any, start?: string, end?: string) {
       salesCount: totals.sales,
       revenue: r2(totals.revenue),
       discount: r2(totals.discount),
+      refunds: r2(refunds),
       costedRevenue: r2(totals.costed),
       cost: r2(totals.cost),
       profit: r2(totals.profit),
@@ -282,5 +338,71 @@ ipcMain.handle('reports:profit', (_e, range?: string, from?: string, to?: string
     return { ok: true, data };
   } catch (err: any) {
     return { ok: false, error: err?.message || 'PROFIT_FAILED' };
+  }
+});
+
+
+/**
+ * What to order, and from whom.
+ *
+ * An item is on the list when it has run out, is down to 10 or fewer, or will
+ * not last another week at the rate it sold over the last 30 days. The
+ * suggested amount covers two weeks of that rate, less what is on the shelf.
+ * An item that has never sold gets no suggestion — guessing would be worse
+ * than leaving it to the owner.
+ *
+ * Grouped by who supplied it last (the latest delivery's supplier), falling
+ * back to the supplier typed on the item.
+ */
+ipcMain.handle('reports:reorder', (_e, days = 30, coverDays = 14) => {
+  try {
+    const db = getDb();
+    const since = new Date(Date.now() - Number(days || 30) * 864e5).toISOString();
+    const rows = db.prepare(`
+      SELECT p.id, p.name, p.sku, p.category, p.stock, p.price, p.cost_price, p.supplier AS typed_supplier,
+             COALESCE((SELECT SUM(si.quantity) FROM sale_items si JOIN sales s ON s.id = si.sale_id
+                       WHERE si.product_id = p.id AND s.voided_at IS NULL AND s.created_at >= ?), 0)
+           - COALESCE((SELECT SUM(ri.qty) FROM sale_return_items ri JOIN sale_returns r ON r.id = ri.return_id
+                       WHERE ri.product_id = p.id AND r.created_at >= ?), 0) AS sold,
+             (SELECT b.supplier_id FROM product_batches b WHERE b.product_id = p.id AND (b.supplier_id IS NOT NULL OR b.supplier IS NOT NULL)
+              ORDER BY b.created_at DESC LIMIT 1) AS last_supplier_id,
+             (SELECT b.supplier FROM product_batches b WHERE b.product_id = p.id AND b.supplier IS NOT NULL
+              ORDER BY b.created_at DESC LIMIT 1) AS last_supplier
+      FROM products p
+    `).all(since, since) as any[];
+    const suppliers = new Map((db.prepare('SELECT id, name, phone, contact_person FROM suppliers').all() as any[]).map((s) => [s.id, s]));
+    const byName = new Map([...suppliers.values()].map((s: any) => [String(s.name).trim().toLowerCase(), s]));
+
+    const items = rows.map((r) => {
+      const perDay = Math.max(0, Number(r.sold || 0)) / Number(days || 30);
+      const stock = Number(r.stock || 0);
+      const daysLeft = perDay > 0 ? stock / perDay : null;
+      const need = stock <= 0 || stock <= 10 || (daysLeft != null && daysLeft < 7);
+      const suggest = perDay > 0 ? Math.max(0, Math.ceil(perDay * Number(coverDays || 14) - stock)) : null;
+      const sup: any = (r.last_supplier_id && suppliers.get(r.last_supplier_id))
+        || byName.get(String(r.last_supplier || r.typed_supplier || '').trim().toLowerCase()) || null;
+      return {
+        id: r.id, name: r.name, sku: r.sku, category: r.category, stock, sold: Math.max(0, Number(r.sold || 0)),
+        perDay: Math.round(perDay * 100) / 100, daysLeft: daysLeft == null ? null : Math.floor(daysLeft),
+        suggest, cost: r.cost_price, need,
+        supplier_id: sup?.id || null,
+        supplier: sup?.name || (String(r.last_supplier || r.typed_supplier || '').trim() || null),
+        phone: sup?.phone || null,
+      };
+    }).filter((i) => i.need);
+
+    const groups = new Map<string, any>();
+    for (const i of items) {
+      const k = i.supplier || '';
+      const g = groups.get(k) || { supplier: i.supplier, supplier_id: i.supplier_id, phone: i.phone, items: [] as any[] };
+      g.items.push(i);
+      groups.set(k, g);
+    }
+    const out = [...groups.values()].map((g) => ({
+      ...g, items: g.items.sort((a: any, b: any) => (a.stock - b.stock) || String(a.name).localeCompare(String(b.name))),
+    })).sort((a, b) => (a.supplier ? 0 : 1) - (b.supplier ? 0 : 1) || String(a.supplier).localeCompare(String(b.supplier)));
+    return { ok: true, data: { groups: out, count: items.length, days, coverDays } };
+  } catch (err: any) {
+    return { ok: false, error: err?.message || 'REORDER_FAILED' };
   }
 });

@@ -27,9 +27,13 @@ import './ipc/admin.js';
 import './ipc/pos.js';
 import './ipc/batches.js';
 import './ipc/grn.js';
+import './ipc/returns.js';
+import './ipc/cashup.js';
 import './ipc/contacts.js';
 import './ipc/sync.js';
 import { getDeviceId } from './sync/events.js';
+import { startAutoSync } from './sync/auto.js';
+import { startAutoBackup, backupNow } from './backup.js';
 
 let mainWindow: InstanceType<typeof BrowserWindow> | null = null;
 let windowWasCreated = false;
@@ -202,6 +206,8 @@ async function bootstrap() {
   try { log.info('[App] device:', getDeviceId()); } catch {}
   log.info('[App] userData:', app.getPath('userData'));
   await createWindow();
+  startAutoSync();
+  startAutoBackup();
   ipcMain.handle('util:restartApp', async () => {
     try { app.relaunch(); app.exit(0); return true; } catch { return false; }
   });
@@ -228,7 +234,11 @@ if (!gotLock) {
       setTimeout(() => { try { app.exit(0); } catch {} }, 3000).unref?.();
     }
   });
-  app.on('before-quit', closePrintWindows);
+  app.on('before-quit', () => {
+    closePrintWindows();
+    // The day's last sales go into today's backup on the way out.
+    try { backupNow(); } catch {}
+  });
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow();
   });

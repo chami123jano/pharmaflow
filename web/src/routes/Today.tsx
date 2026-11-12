@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { supabase } from '../lib/supabase';
 import { lkr, time, startOfDay } from '../lib/format';
 import { Spinner, Empty, ErrorNote, Stat, Pill } from '../components/ui';
+import { load as loadOwner } from '../lib/owner';
 
 interface Sale {
   id: string;
@@ -11,6 +12,7 @@ interface Sale {
   payment_method: string | null;
   cashier_name: string | null;
   voided_at: string | null;
+  refunded?: number | null;
   created_at: string;
 }
 interface Item {
@@ -26,12 +28,14 @@ export default function Today() {
   const [lastSeen, setLastSeen] = useState<string | null>(null);
   const [fresh, setFresh] = useState<Set<string>>(new Set());
   const since = useRef(startOfDay());
+  const [refunds, setRefunds] = useState<any[]>([]);
+  const [cashUp, setCashUp] = useState<any>(null);
 
   const load = useCallback(async () => {
     setError(null);
     const { data, error } = await supabase
       .from('sales')
-      .select('id,receipt_no,total,discount_amount,payment_method,cashier_name,voided_at,created_at')
+      .select('*')
       .gte('created_at', since.current)
       .order('created_at', { ascending: false });
     if (error) { setError(error.message); return; }
@@ -40,6 +44,13 @@ export default function Today() {
     const { data: dev } = await supabase
       .from('devices').select('last_seen_at').order('last_seen_at', { ascending: false }).limit(1);
     setLastSeen(dev?.[0]?.last_seen_at ?? null);
+
+    // Money given back today, and whether the day has been closed. Absent
+    // until the owner pages are set up in Supabase — then simply not shown.
+    const rets = await loadOwner<any>('sale_returns', 'id,refund_total,method,created_at', since.current);
+    setRefunds(rets.rows);
+    const cu = await loadOwner<any>('cash_ups', '*', since.current, { limit: 1 });
+    setCashUp(cu.rows[0] || null);
   }, []);
 
   useEffect(() => { load(); }, [load]);
@@ -86,7 +97,8 @@ export default function Today() {
 
   // A voided sale stays visible — it happened — but never counts as money.
   const live = sales.filter((s) => !s.voided_at);
-  const takings = live.reduce((a, s) => a + Number(s.total || 0), 0);
+  const refunded = refunds.reduce((a, r) => a + Number(r.refund_total || 0), 0);
+  const takings = live.reduce((a, s) => a + Number(s.total || 0), 0) - refunded;
   const discounts = live.reduce((a, s) => a + Number(s.discount_amount || 0), 0);
   const voided = sales.length - live.length;
   const average = live.length ? takings / live.length : 0;
@@ -103,6 +115,17 @@ export default function Today() {
         <Stat label="Average sale" value={lkr(average)} sub={discounts > 0 ? `${lkr(discounts)} discounted` : 'No discounts'} />
       </div>
 
+      {refunded > 0 && (
+        <p className="muted text-xs">{lkr(refunded)} given back on {refunds.length} return{refunds.length === 1 ? '' : 's'} — already taken off takings.</p>
+      )}
+      {cashUp && (
+        <div className="card flex items-center justify-between gap-3 p-3.5 text-sm">
+          <span>Day closed at {time(cashUp.created_at)}{cashUp.created_by_name ? ` by ${cashUp.created_by_name}` : ''}</span>
+          <Pill tone={Math.abs(cashUp.difference) < 0.005 ? 'ok' : cashUp.difference > 0 ? 'warn' : 'bad'}>
+            {Math.abs(cashUp.difference) < 0.005 ? 'Balanced' : `${lkr(Math.abs(cashUp.difference))} ${cashUp.difference > 0 ? 'over' : 'short'}`}
+          </Pill>
+        </div>
+      )}
       {voided > 0 && (
         <p className="muted text-xs">
           {voided} voided sale{voided === 1 ? '' : 's'} today — not counted above.
@@ -124,6 +147,7 @@ export default function Today() {
                   <div className="flex items-center gap-2">
                     <span className="font-semibold">#{s.receipt_no ?? '—'}</span>
                     {s.voided_at && <Pill tone="bad">Voided</Pill>}
+                    {!s.voided_at && Number(s.refunded) > 0 && <Pill tone="warn">−{lkr(s.refunded)} refunded</Pill>}
                     {s.payment_method && <Pill tone="none">{s.payment_method}</Pill>}
                   </div>
                   <p className="faint mt-0.5 truncate text-xs">

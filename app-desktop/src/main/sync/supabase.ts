@@ -140,7 +140,13 @@ export interface Snapshot {
   saleItems: any[];
   customers: any[];
   suppliers: any[];
+  extras?: { grns: any[]; grnItems: any[]; returns: any[]; returnItems: any[]; cashUps: any[] };
 }
+
+/** Drops the given keys from every row — for a cloud table not yet given the new columns. */
+const without = (rows: any[], keys: string[]) => rows.map((r) => {
+  const o = { ...r }; for (const k of keys) delete o[k]; return o;
+});
 
 /**
  * Pushes readable rows for the website.
@@ -170,8 +176,40 @@ export async function pushSnapshot(cfg: CloudConfig, snap: Snapshot): Promise<vo
   await upsert(cfg, 'product_batches', snap.batches);
   await upsert(cfg, 'customers', snap.customers);
   await upsert(cfg, 'suppliers', snap.suppliers);
-  await upsert(cfg, 'sales', snap.sales);
-  await upsert(cfg, 'sale_items', snap.saleItems);
+  /**
+   * Sales carry `refunded` and lines carry `unit_cost` — columns added after
+   * the cloud tables were first made. Until the owner runs the add-on SQL,
+   * Supabase refuses rows with unknown columns, so retry without them rather
+   * than let the whole sync fail over the newer figures.
+   */
+  try { await upsert(cfg, 'sales', snap.sales); }
+  catch (err: any) {
+    log.warn('[cloud] sales without refunds column:', err?.message || err);
+    await upsert(cfg, 'sales', without(snap.sales, ['refunded']));
+  }
+  try { await upsert(cfg, 'sale_items', snap.saleItems); }
+  catch (err: any) {
+    log.warn('[cloud] sale lines without cost column:', err?.message || err);
+    await upsert(cfg, 'sale_items', without(snap.saleItems, ['unit_cost']));
+  }
+
+  // Deliveries, returns and cash-ups for the owner's pages. Optional in the
+  // same way as the shop row: missing tables are reported, never fatal.
+  if (snap.extras) {
+    const parts: Array<[string, any[]]> = [
+      ['grns', snap.extras.grns], ['grn_items', snap.extras.grnItems],
+      ['sale_returns', snap.extras.returns], ['sale_return_items', snap.extras.returnItems],
+      ['cash_ups', snap.extras.cashUps],
+    ];
+    for (const [table, rows] of parts) {
+      if (!rows.length) continue;
+      try { await upsert(cfg, table, rows); }
+      catch (err: any) {
+        log.warn(`[cloud] ${table} not mirrored:`, err?.message || err, '- run supabase/add-owner-pages.sql to enable it');
+        break; // later tables depend on earlier ones; no point trying the rest
+      }
+    }
+  }
   log.info('[cloud] snapshot pushed', {
     products: snap.products.length,
     sales: snap.sales.length,

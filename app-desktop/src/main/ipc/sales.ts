@@ -166,6 +166,8 @@ ipcMain.handle('sales:summaryToday', () => {
   const end = new Date(); end.setHours(23,59,59,999);
   const rows = db.prepare('SELECT total, created_at FROM sales WHERE voided_at IS NULL AND created_at >= ? AND created_at <= ?')
     .all(start.toISOString(), end.toISOString()) as any[];
-  const totalSales = rows.reduce((a, c) => a + Number(c.total || 0), 0);
-  return { ok: true, data: { totalSales, transactions: rows.length } };
+  const refunds = Number((db.prepare(`SELECT COALESCE(SUM(r.refund_total),0) AS n FROM sale_returns r JOIN sales s ON s.id = r.sale_id
+    WHERE s.voided_at IS NULL AND r.created_at >= ? AND r.created_at <= ?`).get(start.toISOString(), end.toISOString()) as any)?.n || 0);
+  const totalSales = rows.reduce((a, c) => a + Number(c.total || 0), 0) - refunds;
+  return { ok: true, data: { totalSales, transactions: rows.length, refunds } };
 });

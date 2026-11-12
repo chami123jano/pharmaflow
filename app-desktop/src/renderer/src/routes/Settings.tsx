@@ -6,7 +6,7 @@ import CategoriesPanel from '../components/CategoriesPanel';
 import Select from '../components/Select';
 import { useToast } from '../components/Toast';
 import { useConfirm } from '../components/Confirm';
-import { ui } from '../lib/ui';
+import { ui, pill } from '../lib/ui';
 
 interface Setting { key:string; value:string }
 
@@ -46,6 +46,13 @@ export default function Settings({ user, darkMode }: { user?: any; tokens?: any;
   const [adminMsg, setAdminMsg] = useState<string>('');
   const [busy, setBusy] = useState<boolean>(false);
   const [advanced, setAdvanced] = useState(false);
+  const [bk, setBk] = useState<any>(null);
+
+  async function loadBackup() {
+    const r: any = await (window as any).api?.backup?.status?.();
+    if (r?.ok) setBk(r.data);
+  }
+  useEffect(() => { if (tab === 'tools') loadBackup(); }, [tab]);
 
   function setTab(k: Tab) {
     setTabState(k);
@@ -258,11 +265,46 @@ export default function Settings({ user, darkMode }: { user?: any; tokens?: any;
               <p className={`text-sm mt-0.5 ${t.muted}`}>Keep a copy of everything, and a few one-off jobs.</p>
             </div>
 
-            <Tool title="Back up" body="Saves a copy of all products, stock and sales to a file you choose. Do this often — a USB stick is fine.">
-              <button disabled={busy} onClick={backup} className={t.btnPrimary}>{busy ? 'Working…' : 'Back up now'}</button>
-            </Tool>
+            {/* Automatic: one dated file a day, the newest 30 kept. */}
+            <div className={`${t.well} p-4`}>
+              <div className="flex items-start justify-between gap-4">
+                <div className="min-w-0">
+                  <div className={`font-semibold ${t.page}`}>Automatic backup <span className={`ml-1 ${pill(bk?.lastError ? 'out' : bk?.last ? 'ok' : 'muted')}`}>{bk?.lastError ? 'Failing' : bk?.last ? 'On' : 'Starting'}</span></div>
+                  <p className={`text-sm mt-0.5 ${t.muted}`}>
+                    Every day, every hour while there are changes, and when the app closes. The last {bk?.keep ?? 30} days are kept.
+                  </p>
+                  {bk && <p className={`text-sm mt-2 ${t.page}`}>
+                    {bk.last ? <>Last saved <b>{new Date(bk.last).toLocaleString('en-GB', { weekday: 'short', day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}</b> · {bk.count} file{bk.count === 1 ? '' : 's'} kept</> : 'No backup yet — the first one is made a minute after the app opens.'}
+                  </p>}
+                  {bk?.lastError && <p className="text-sm mt-1 text-red-600">Last attempt failed: {bk.lastError}</p>}
+                  {bk && <p className={`text-xs mt-1 break-all ${t.muted}`}>
+                    {bk.folder}{bk.isDefault && /onedrive/i.test(bk.folder) ? ' — inside OneDrive, so a copy is also kept online' : ''}
+                  </p>}
+                </div>
+                <div className="shrink-0 flex flex-col gap-2">
+                  <button disabled={busy} className={t.btnPrimary} onClick={async () => {
+                    setBusy(true);
+                    const r: any = await (window as any).api?.backup?.run?.();
+                    setBusy(false);
+                    if (r?.ok) toast.success('Backed up'); else toast.error(r?.error || 'Backup failed');
+                    loadBackup();
+                  }}>{busy ? 'Working…' : 'Back up now'}</button>
+                  <button className={t.btnGhost} onClick={() => (window as any).api?.backup?.openFolder?.()}>Open folder</button>
+                </div>
+              </div>
+              <div className="mt-3 flex gap-3 text-sm">
+                <button className="text-teal-700 hover:underline font-medium" onClick={async () => {
+                  const r: any = await (window as any).api?.backup?.chooseFolder?.();
+                  if (r?.ok) { toast.success('Backups will go to the new folder'); loadBackup(); }
+                }}>Change folder (e.g. a USB stick)</button>
+                {bk && !bk.isDefault && <button className={`${t.muted} hover:underline`} onClick={async () => {
+                  await (window as any).api?.backup?.resetFolder?.(); loadBackup();
+                }}>Use the default folder</button>}
+                <button className={`${t.muted} hover:underline ml-auto`} disabled={busy} onClick={backup}>Save a copy somewhere else…</button>
+              </div>
+            </div>
 
-            <Tool title="Restore" body="Replaces everything here with a backup file. Takes effect when the app restarts.">
+            <Tool title="Restore" body="Replaces everything here with a backup file — pick one from the backup folder. Takes effect when the app restarts.">
               <button disabled={busy} onClick={restore} className={t.btnGhost}>{busy ? 'Working…' : 'Restore…'}</button>
             </Tool>
 

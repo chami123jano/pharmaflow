@@ -5,6 +5,8 @@ import { useToast } from '../components/Toast';
 import { parseEntry, searchProducts, findExact, tenderSuggestions } from '../lib/pos-input';
 import { receiptHTML } from '../lib/receipt';
 import { useShop } from '../lib/shop';
+import ReturnDialog from '../components/ReturnDialog';
+import CashUpDialog from '../components/CashUpDialog';
 
 /**
  * The sale moves forward in stages, and the numpad + key is what moves it.
@@ -44,6 +46,8 @@ export default function Sales({ user, tokens, darkMode }: { user: any; tokens?: 
 
   const [heldBills, setHeldBills] = useState<any[]>([]);
   const [showHeld, setShowHeld] = useState(false);
+  const [showReturn, setShowReturn] = useState(false);
+  const [showCashUp, setShowCashUp] = useState(false);
   const [heldIdx, setHeldIdx] = useState(0);
   const [showReceipt, setShowReceipt] = useState(false);
   const [lastSale, setLastSale] = useState<any>(null);
@@ -481,6 +485,7 @@ export default function Sales({ user, tokens, darkMode }: { user: any; tokens?: 
     { key: 'F3', description: 'Hold bill', group: 'POS', action: () => holdBill() },
     { key: 'F6', description: 'Recall held bill', group: 'POS', action: () => openHeld() },
     { key: 'F7', description: 'Exact cash', group: 'POS', action: () => { if (stage === 'cash') { setTender(Math.ceil(total)); setTimeout(() => cashRef.current?.focus(), 20); } } },
+    { key: 'F8', description: 'Return items from a bill', group: 'POS', action: () => setShowReturn(true), enabled: !showReturn && !showCashUp },
     { key: 'F9', description: 'Reprint last receipt', group: 'POS', action: () => reprint() },
     { key: 'Escape', description: 'Cancel / back', group: 'POS', action: () => {
       if (showReceipt) { setShowReceipt(false); focusSearch(); return; }
@@ -813,8 +818,16 @@ export default function Sales({ user, tokens, darkMode }: { user: any; tokens?: 
             className={`py-2 rounded-xl border text-sm font-medium transition ${dm ? 'bg-slate-700 border-slate-600 text-slate-300 hover:bg-slate-600' : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50'}`}>
             Recall · F6 {heldBills.length > 0 && <span className="ml-1 px-1.5 rounded-full bg-orange-500 text-white text-xs">{heldBills.length}</span>}
           </button>
+          {/* The day's other two jobs: taking items back, and closing the drawer. */}
+          <button onClick={() => setShowReturn(true)} title="Take items back from a bill"
+            className={`py-2 rounded-xl border text-sm font-medium transition ${dm ? 'bg-slate-700 border-slate-600 text-slate-300 hover:bg-slate-600' : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50'}`}>Return · F8</button>
+          <button onClick={() => setShowCashUp(true)} title="Count the drawer and close the day"
+            className={`py-2 rounded-xl border text-sm font-medium transition ${dm ? 'bg-slate-700 border-slate-600 text-slate-300 hover:bg-slate-600' : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50'}`}>Close day</button>
         </div>
       </div>
+
+      {showReturn && <ReturnDialog user={user} darkMode={dm} onClose={() => { setShowReturn(false); focusSearch(); }} onDone={fetchProducts} />}
+      {showCashUp && <CashUpDialog user={user} darkMode={dm} onClose={() => { setShowCashUp(false); focusSearch(); }} />}
 
       {/* Admin approval */}
       {askPassword && (

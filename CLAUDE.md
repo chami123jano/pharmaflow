@@ -106,6 +106,38 @@ else **NULL** — never 0, which would report the whole sale as profit.
   existing cost rather than wiping it. Products' cost is not mirrored to the
   cloud.
 
+### Automatic sync and backup (`sync/auto.ts`, `backup.ts`)
+
+- **Sync runs by itself**: every 5 minutes, 30 s after start, and 20 s after
+  any `recordEvent` (debounced). `syncNow()` never runs two at once; a request
+  mid-run earns one more run. `sync:run` from Settings goes through the same
+  path. Before this, sync only ran on a button press and the website went six
+  weeks stale.
+- **Backup**: `Documents\PharmaFlow\Backups\pharmaflow-YYYY-MM-DD.db` (OneDrive
+  on the shop PC), a minute after start, hourly when the DB file is newer than
+  today's copy, and on quit. Newest 30 kept. Settings are written *before* the
+  copy so the copy is never older than the file it was taken from.
+- Test builds must point `backup.folder`, `receipts.folder` and the printer at
+  scratch locations — finishing a sale prints and files a PDF automatically.
+
+### Returns and cash-up (`ipc/returns.ts`, `ipc/cashup.ts`)
+
+- A return never edits the sale. `sales.refunded` is a running total; takings
+  everywhere are `total − refunded`, and **refunds count on the day they are
+  paid back**. Refund per unit = unit price × (sale total ÷ subtotal), so the
+  bill's discount is shared out. Capped at what is left on the bill.
+- Each returned line records `unit_cost` and `restocked`. Restocked: units go
+  back into the batch they came from and their cost comes off cost of goods.
+  Not restocked: the cost stays — that stock is lost.
+- Cashiers need an admin (`approver_id`, role read from the DB). A bill with a
+  return cannot be voided (`HAS_RETURNS`).
+- Cash-up covers the time since the previous one on this device; expected =
+  float + cash sales − cash refunds.
+- Both sync as events (`sale.returned`, `cashup.created`) and are mirrored for
+  the website's owner pages. Those cloud tables come from
+  `supabase/add-owner-pages.sql`; until it is run, `pushSnapshot` retries
+  without the new columns and skips the new tables rather than failing.
+
 ### Goods received notes (`ipc/grn.ts`, `routes/Receive.tsx`)
 
 A GRN is one supplier delivery: header in `grns`, lines in `grn_items`. **Every

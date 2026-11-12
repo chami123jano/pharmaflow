@@ -63,8 +63,24 @@ const BATCHES = [
 const SHOP = [{ name: 'Chamindu Pharmacy', address: 'No. 12, Main Street, Kandy', phone: '0714438410', logo: 'capsule' }];
 const DEVICES = [{ last_seen_at: new Date(Date.now() - 4 * 60 * 1000).toISOString() }];
 
+// Owner pages: costs, a return, a cash-up and two deliveries.
+const COSTS: Record<string, number> = { p1: 70, p2: 18, p3: 380 };
+const ITEMS_C = ITEMS.map((i: any) => ({ ...i, unit_cost: COSTS[i.product_id] ?? null }));
+const RETURNS = [{ id: 'r1', return_no: 1, sale_id: 's1', receipt_no: 41, refund_total: 96.67, method: 'cash', reason: 'wrong strength', created_by_name: 'Admin', created_at: at(18, 40) }];
+const RETURN_ITEMS = [{ id: 'ri1', return_id: 'r1', product_id: 'p1', product_name: 'Panadol 500mg', qty: 1, refund: 96.67, unit_cost: 70, restocked: true }];
+const CASHUPS = [{ id: 'c1', created_at: at(21, 5), created_by_name: 'Admin', difference: -50, expected_cash: 5200, counted_cash: 5150 }];
+const GRNS = [
+  { id: 'g1', grn_no: 2, supplier_name: 'City Pharma Distributors', invoice_no: 'INV-20431', total_cost: 12450, line_count: 3, unit_count: 140, created_at: at(9, 30), voided_at: null },
+  { id: 'g2', grn_no: 1, supplier_name: 'Hemas', invoice_no: 'H-1188', total_cost: 3600, line_count: 1, unit_count: 40, created_at: at(8, 5), voided_at: null },
+];
+const GRN_ITEMS = [
+  { id: 'gi1', grn_id: 'g1', product_name: 'Panadol 500mg', batch_no: 'PX-22', expiry: '2028-03-31', qty: 100, free_qty: 10, cost_price: 70, line_total: 7000 },
+  { id: 'gi2', grn_id: 'g1', product_name: 'Amoxil 250mg Capsule', batch_no: 'AM-7', expiry: '2027-08-31', qty: 30, free_qty: 0, cost_price: 150, line_total: 4500 },
+];
+
 const TABLES: Record<string, any[]> = {
-  sales: SALES, sale_items: ITEMS, products: PRODUCTS,
+  sale_returns: RETURNS, sale_return_items: RETURN_ITEMS, cash_ups: CASHUPS, grns: GRNS, grn_items: GRN_ITEMS,
+  sales: SALES, sale_items: ITEMS_C, products: PRODUCTS,
   product_batches: BATCHES, shop: SHOP, devices: DEVICES, app_users: [{ user_id: 'u1', role: 'owner' }],
 };
 
@@ -77,7 +93,7 @@ function builder(table: string) {
     is: (col: string, val: any) => { rows = rows.filter((r) => r[col] === val); return self; },
     gte: (col: string, val: any) => { rows = rows.filter((r) => String(r[col]) >= String(val)); return self; },
     gt: (col: string, val: any) => { rows = rows.filter((r) => Number(r[col]) > Number(val)); return self; },
-    in: () => self,
+    in: (col: string, vals: any[]) => { rows = rows.filter((r) => vals.includes(r[col])); return self; },
     order: (col: string, o: any) => {
       rows.sort((a, b) => String(a[col]).localeCompare(String(b[col])));
       if (o && o.ascending === false) rows.reverse();

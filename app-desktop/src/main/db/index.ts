@@ -166,6 +166,36 @@ export async function ensureSchema() {
   d.prepare('CREATE INDEX IF NOT EXISTS idx_grn_items_grn ON grn_items(grn_id)').run();
   ensureColumn(d, 'product_batches', 'grn_id', 'TEXT');
 
+  // Returns: part of a bill coming back. The sale itself is never edited —
+  // sales.refunded is a running total of what has been paid back on it, so
+  // takings are total − refunded. Each returned line remembers its cost and
+  // whether the units went back on the shelf, which decides what the return
+  // does to profit.
+  ensureColumn(d, 'sales', 'refunded', 'REAL NOT NULL DEFAULT 0');
+  ensureTable(d, 'sale_returns', `CREATE TABLE IF NOT EXISTS sale_returns (
+    id TEXT PRIMARY KEY, return_no INTEGER, sale_id TEXT NOT NULL, receipt_no INTEGER,
+    refund_total REAL NOT NULL DEFAULT 0, method TEXT NOT NULL DEFAULT 'cash', reason TEXT,
+    created_by TEXT, created_by_name TEXT, approved_by TEXT, device TEXT, created_at TEXT NOT NULL)`);
+  d.prepare('CREATE INDEX IF NOT EXISTS idx_returns_sale    ON sale_returns(sale_id)').run();
+  d.prepare('CREATE INDEX IF NOT EXISTS idx_returns_created ON sale_returns(created_at)').run();
+  ensureTable(d, 'sale_return_items', `CREATE TABLE IF NOT EXISTS sale_return_items (
+    id TEXT PRIMARY KEY, return_id TEXT NOT NULL, sale_item_id TEXT, product_id TEXT, product_name TEXT,
+    batch_id TEXT, qty INTEGER NOT NULL, unit_price REAL, refund REAL NOT NULL DEFAULT 0,
+    unit_cost REAL, restocked INTEGER NOT NULL DEFAULT 1,
+    FOREIGN KEY (return_id) REFERENCES sale_returns(id) ON DELETE CASCADE)`);
+  d.prepare('CREATE INDEX IF NOT EXISTS idx_return_items_return ON sale_return_items(return_id)').run();
+  d.prepare('CREATE INDEX IF NOT EXISTS idx_return_items_line   ON sale_return_items(sale_item_id)').run();
+
+  // End-of-day cash-ups: what the drawer should hold, what was counted, and
+  // the difference. Each covers the time since the previous one on this PC.
+  ensureTable(d, 'cash_ups', `CREATE TABLE IF NOT EXISTS cash_ups (
+    id TEXT PRIMARY KEY, period_start TEXT NOT NULL, period_end TEXT NOT NULL,
+    float_amount REAL NOT NULL DEFAULT 0, cash_sales REAL NOT NULL DEFAULT 0, card_sales REAL NOT NULL DEFAULT 0,
+    cash_refunds REAL NOT NULL DEFAULT 0, card_refunds REAL NOT NULL DEFAULT 0, sales_count INTEGER NOT NULL DEFAULT 0,
+    expected_cash REAL NOT NULL DEFAULT 0, counted_cash REAL NOT NULL DEFAULT 0, difference REAL NOT NULL DEFAULT 0,
+    denominations TEXT, notes TEXT, created_by TEXT, created_by_name TEXT, device TEXT, created_at TEXT NOT NULL)`);
+  d.prepare('CREATE INDEX IF NOT EXISTS idx_cashups_created ON cash_ups(created_at)').run();
+
   // Which batch each sold line came out of, for recalls and for putting the
   // right quantity back when a sale is voided.
   ensureColumn(d, 'sale_items', 'batch_id', 'TEXT');

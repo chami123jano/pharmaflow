@@ -37,6 +37,7 @@ export default function Dashboard({ user, tokens, onQuickNav, darkMode }: { user
   const [lowStock, setLow]  = useState<any[]>([]);
   const [expiring, setExp]  = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [health, setHealth] = useState<any>(null);
 
   async function fetchAll() {
     setLoading(true);
@@ -48,6 +49,13 @@ export default function Dashboard({ user, tokens, onQuickNav, darkMode }: { user
         window.api?.reports?.nearExpiry?.(30),
         window.api?.sales?.list?.(5),
       ]);
+      // Is the website current, and is there a backup? Owner's question only.
+      if (user?.role === 'admin') {
+        try {
+          const [sy, bk]: any[] = await Promise.all([window.api?.sync?.status?.(), (window as any).api?.backup?.status?.()]);
+          setHealth({ sync: sy?.data || null, backup: bk?.data || null });
+        } catch {}
+      }
       // Today's profit is for the owner; the counter staff see takings only.
       const profitRes: any = user?.role === 'admin' ? await (window as any).api?.reports?.profit?.('today') : null;
       const productsRes = await window.api?.products?.list?.();
@@ -115,6 +123,7 @@ export default function Dashboard({ user, tokens, onQuickNav, darkMode }: { user
         <div>
           <h1 className="text-lg font-bold leading-tight">Welcome back, {user?.name || 'Admin'}</h1>
           <p className="text-navy-100 text-xs">Here is what is happening at your pharmacy today.</p>
+          {health && <HealthLine health={health} />}
         </div>
         <div className="flex gap-2">
           <button onClick={() => onQuickNav?.('sales')} className="px-3.5 py-2 bg-white text-teal-700 rounded-lg text-sm font-semibold hover:bg-teal-50 transition-colors">New Sale</button>
@@ -235,6 +244,9 @@ export default function Dashboard({ user, tokens, onQuickNav, darkMode }: { user
                     <td className={`py-2 text-xs ${textSecondary}`}>{new Date(s.created_at).toLocaleString('en-GB', { day:'2-digit', month:'short', hour:'2-digit', minute:'2-digit' })}</td>
                     <td className="py-2">
                       {/* A voided bill is still shown — it happened — but must not read as money taken. */}
+                      {Number(s.refunded) > 0 && !s.voided_at && (
+                        <span className="mr-1.5 text-xs px-2 py-0.5 rounded-full font-medium bg-amber-100 text-amber-800">PART REFUNDED</span>
+                      )}
                       {s.voided_at
                         ? <span className="text-xs px-2 py-0.5 rounded-full font-medium bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300">VOIDED</span>
                         : <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${s.payment_method === 'cash' ? 'bg-lime-100 text-lime-800' : 'bg-teal-100 text-teal-800'}`}>{s.payment_method?.toUpperCase()}</span>}
@@ -247,6 +259,41 @@ export default function Dashboard({ user, tokens, onQuickNav, darkMode }: { user
           </div>
         )}
       </div>
+    </div>
+  );
+}
+
+/** "Synced 3 min ago · Backed up 2:05 pm" — and says so plainly when either has stopped. */
+function HealthLine({ health }: { health: any }) {
+  const ago = (iso?: string | null) => {
+    if (!iso) return null;
+    const m = Math.round((Date.now() - new Date(iso).getTime()) / 60000);
+    if (m < 1) return 'just now';
+    if (m < 60) return `${m} min ago`;
+    const h = Math.round(m / 60);
+    if (h < 48) return `${h} hour${h === 1 ? '' : 's'} ago`;
+    return `${Math.round(h / 24)} days ago`;
+  };
+  const sy = health.sync;
+  const cloudOn = sy && (sy.cloudConfigured || sy.configured);
+  const failed = /^failed/i.test(sy?.lastResult || '');
+  const stale = sy?.lastSync && Date.now() - new Date(sy.lastSync).getTime() > 60 * 60000;
+  const bk = health.backup;
+  const bad = 'bg-amber-400/20 text-amber-200';
+  const good = 'bg-white/10 text-navy-100';
+  return (
+    <div className="mt-1.5 flex gap-1.5 flex-wrap text-[11px] font-medium">
+      {cloudOn && (
+        <span className={`px-2 py-0.5 rounded-full ${failed || stale || !sy.lastSync ? bad : good}`}
+          title={sy.lastResult || ''}>
+          {failed ? `Website not updating — last worked ${ago(sy.lastSync) || "never"}` : `Website synced ${ago(sy.lastSync) || 'not yet'}`}
+        </span>
+      )}
+      {bk && (
+        <span className={`px-2 py-0.5 rounded-full ${bk.lastError || !bk.last ? bad : good}`} title={bk.folder}>
+          {bk.lastError ? 'Backup failing — see Settings' : bk.last ? `Backed up ${ago(bk.last)}` : 'No backup yet'}
+        </span>
+      )}
     </div>
   );
 }

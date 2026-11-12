@@ -4,10 +4,12 @@ import Today from '../routes/Today';
 import Reports from '../routes/Reports';
 import Products from '../routes/Products';
 import Stock from '../routes/Stock';
+import Profit from '../routes/Profit';
+import Deliveries from '../routes/Deliveries';
 import { AuthProvider } from '../lib/auth';
 import '../index.css';
 
-const PAGES: Record<string, () => JSX.Element> = { today: Today, reports: Reports, products: Products, stock: Stock };
+const PAGES: Record<string, () => JSX.Element> = { today: Today, reports: Reports, products: Products, stock: Stock, profit: Profit, deliveries: Deliveries };
 const which = new URLSearchParams(location.search).get('p') || 'today';
 const Page = PAGES[which] || Today;
 

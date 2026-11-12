@@ -62,6 +62,23 @@ const api = {
     delete:  (id: string) => ipcRenderer.invoke('suppliers:delete', id) as Promise<IpcResult>,
     history: (id: string, limit?: number) => ipcRenderer.invoke('suppliers:history', id, limit) as Promise<IpcResult>,
   },
+  returns: {
+    lookup: (receiptNo: number | string) => ipcRenderer.invoke('returns:lookup', receiptNo) as Promise<IpcResult>,
+    create: (payload: any) => ipcRenderer.invoke('returns:create', payload) as Promise<IpcResult>,
+    list:   (opts?: { limit?: number }) => ipcRenderer.invoke('returns:list', opts) as Promise<IpcResult>,
+  },
+  cashup: {
+    preview: () => ipcRenderer.invoke('cashup:preview') as Promise<IpcResult>,
+    save:    (payload: any) => ipcRenderer.invoke('cashup:save', payload) as Promise<IpcResult>,
+    list:    (limit?: number) => ipcRenderer.invoke('cashup:list', limit) as Promise<IpcResult>,
+  },
+  backup: {
+    status:       () => ipcRenderer.invoke('backup:status') as Promise<IpcResult>,
+    run:          () => ipcRenderer.invoke('backup:run') as Promise<IpcResult>,
+    chooseFolder: () => ipcRenderer.invoke('backup:chooseFolder') as Promise<IpcResult>,
+    resetFolder:  () => ipcRenderer.invoke('backup:resetFolder') as Promise<IpcResult>,
+    openFolder:   () => ipcRenderer.invoke('backup:openFolder') as Promise<IpcResult>,
+  },
   grn: {
     create: (payload: any) => ipcRenderer.invoke('grn:create', payload) as Promise<IpcResult>,
     list:   (opts?: { search?: string; limit?: number }) => ipcRenderer.invoke('grn:list', opts) as Promise<IpcResult>,
@@ -91,6 +108,7 @@ const api = {
     stockMovements:  (productId?: string) => ipcRenderer.invoke('reports:stockMovements', productId) as Promise<IpcResult>,
     inventoryValue:  () => ipcRenderer.invoke('reports:inventoryValue') as Promise<IpcResult>,
     profit:          (range?: string, from?: string, to?: string) => ipcRenderer.invoke('reports:profit', range, from, to) as Promise<IpcResult>,
+    reorder:         (days?: number, coverDays?: number) => ipcRenderer.invoke('reports:reorder', days, coverDays) as Promise<IpcResult>,
   },
   settings: {
     get:  (key: string) => ipcRenderer.invoke('settings:get', key) as Promise<IpcResult>,

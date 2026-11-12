@@ -2,6 +2,10 @@ import { useState, useEffect } from 'react';
 import { formatLKR, formatLKRShort } from '../lib/format';
 import Select from '../components/Select';
 import ProfitReport from '../components/ProfitReport';
+import ReorderReport from '../components/ReorderReport';
+import { useShop } from '../lib/shop';
+import { cashUpHTML } from '../lib/slips';
+import { useToast } from '../components/Toast';
 
 const RANGES = [
   { value:'today', label:'Today' },
@@ -30,6 +34,10 @@ export default function Reports({ user, tokens, darkMode }: { user: any; tokens?
   const [lowStock, setLow]      = useState<any[]>([]);
   const [nearExpiry, setNear]   = useState<any[]>([]);
   const [profit, setProfit]     = useState<any>(null);
+  const [returns, setReturns]   = useState<any[]>([]);
+  const [cashUps, setCashUps]   = useState<any[]>([]);
+  const shop = useShop();
+  const toast = useToast();
   const [loading, setLoading]   = useState(false);
 
   useEffect(() => { fetchData(); }, [range, reportType]);
@@ -46,6 +54,12 @@ export default function Reports({ user, tokens, darkMode }: { user: any; tokens?
         setSummary(sumRes?.data ?? {});
         setTrend(trendRes?.data ?? []);
         setTop(topRes?.data ?? []);
+      } else if (reportType === 'returns') {
+        const res: any = await (window as any).api?.returns?.list?.({ limit: 500 });
+        setReturns(res?.ok ? res.data : []);
+      } else if (reportType === 'cashups') {
+        const res: any = await (window as any).api?.cashup?.list?.(200);
+        setCashUps(res?.ok ? res.data : []);
       } else if (reportType === 'profit') {
         const res: any = await (window as any).api?.reports?.profit?.(range);
         setProfit(res?.ok ? res.data : null);
@@ -109,12 +123,15 @@ export default function Reports({ user, tokens, darkMode }: { user: any; tokens?
             <Select aria-label="Report type" value={reportType} onChange={setType} options={[
               { value: 'sales',    label: 'Sales report' },
               { value: 'profit',   label: 'Profit' },
+              { value: 'reorder',  label: 'Reorder list' },
+              { value: 'returns',  label: 'Returns' },
+              { value: 'cashups',  label: 'Cash-ups' },
               { value: 'top',      label: 'Top products' },
               { value: 'lowstock', label: 'Low stock' },
               { value: 'expiry',   label: 'Near expiry' },
             ]} />
           </div>
-          <div>
+          <div className={['reorder', 'returns', 'cashups'].includes(reportType) ? 'invisible' : ''}>
             <label className={`block text-xs font-semibold uppercase tracking-wide mb-1.5 ${ts}`}>Date Range</label>
             <Select aria-label="Date range" value={range} onChange={setRange}
               options={RANGES.map(r => ({ value: r.value, label: r.label }))} />
@@ -124,11 +141,70 @@ export default function Reports({ user, tokens, darkMode }: { user: any; tokens?
 
       {loading && <div className={`text-center py-8 ${ts}`}>Loading...</div>}
 
+      {reportType === 'reorder' && (
+        <div className="flex-1 min-h-0 overflow-auto"><ReorderReport darkMode={dm} /></div>
+      )}
+
+      {reportType === 'returns' && !loading && (
+        <div className={`${card} flex-1 min-h-0 overflow-auto`}>
+          <h3 className={`text-sm font-semibold ${tp} mb-4`}>Returns</h3>
+          {returns.length === 0 ? <div className={`text-center py-8 ${ts} text-sm`}>No returns yet</div> : (
+            <table className="w-full text-sm">
+              <thead><tr className={`border-b ${dm ? 'border-slate-700' : 'border-slate-100'}`}>
+                <th className={`text-left py-2 font-medium ${ts}`}>Return</th><th className={`text-left py-2 font-medium ${ts}`}>When</th>
+                <th className={`text-left py-2 font-medium ${ts}`}>Bill</th><th className={`text-left py-2 font-medium ${ts}`}>Reason</th>
+                <th className={`text-left py-2 font-medium ${ts}`}>By</th><th className={`text-right py-2 font-medium ${ts}`}>Given back</th>
+              </tr></thead>
+              <tbody>{returns.map((x: any) => (
+                <tr key={x.id} className={`border-b ${dm ? 'border-slate-700' : 'border-slate-50'}`}>
+                  <td className={`py-2 font-semibold ${tp}`}>#{String(x.return_no).padStart(4, '0')}</td>
+                  <td className={`py-2 ${ts}`}>{new Date(x.created_at).toLocaleString('en-GB', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}</td>
+                  <td className={`py-2 ${tp}`}>#{x.receipt_no}</td>
+                  <td className={`py-2 ${ts}`}>{x.reason || '—'}</td>
+                  <td className={`py-2 ${ts}`}>{x.created_by_name || '—'}{x.approved_by && x.approved_by !== x.created_by_name ? ` (ok: ${x.approved_by})` : ''}</td>
+                  <td className={`py-2 text-right font-semibold ${tp}`}>{formatLKR(x.refund_total)} <span className={`text-xs font-normal ${ts}`}>{x.method}</span></td>
+                </tr>))}</tbody>
+            </table>
+          )}
+        </div>
+      )}
+
+      {reportType === 'cashups' && !loading && (
+        <div className={`${card} flex-1 min-h-0 overflow-auto`}>
+          <h3 className={`text-sm font-semibold ${tp} mb-4`}>Cash-ups</h3>
+          {cashUps.length === 0 ? <div className={`text-center py-8 ${ts} text-sm`}>No cash-ups yet. Use "Close day" on the Sales page at the end of the day.</div> : (
+            <table className="w-full text-sm">
+              <thead><tr className={`border-b ${dm ? 'border-slate-700' : 'border-slate-100'}`}>
+                <th className={`text-left py-2 font-medium ${ts}`}>Closed</th><th className={`text-left py-2 font-medium ${ts}`}>By</th>
+                <th className={`text-right py-2 font-medium ${ts}`}>Bills</th><th className={`text-right py-2 font-medium ${ts}`}>Expected</th>
+                <th className={`text-right py-2 font-medium ${ts}`}>Counted</th><th className={`text-right py-2 font-medium ${ts}`}>Difference</th><th></th>
+              </tr></thead>
+              <tbody>{cashUps.map((c: any) => (
+                <tr key={c.id} className={`border-b ${dm ? 'border-slate-700' : 'border-slate-50'}`}>
+                  <td className={`py-2 ${tp}`}>{new Date(c.created_at).toLocaleString('en-GB', { weekday: 'short', day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}</td>
+                  <td className={`py-2 ${ts}`}>{c.created_by_name || '—'}</td>
+                  <td className={`py-2 text-right ${tp}`}>{c.sales_count}</td>
+                  <td className={`py-2 text-right ${tp}`}>{formatLKR(c.expected_cash)}</td>
+                  <td className={`py-2 text-right ${tp}`}>{formatLKR(c.counted_cash)}</td>
+                  <td className={`py-2 text-right font-semibold ${Math.abs(c.difference) < 0.005 ? 'text-lime-700' : c.difference > 0 ? 'text-amber-600' : 'text-red-600'}`}>
+                    {Math.abs(c.difference) < 0.005 ? 'Balanced' : `${formatLKR(Math.abs(c.difference))} ${c.difference > 0 ? 'over' : 'short'}`}</td>
+                  <td className="py-2 text-right">
+                    <button className="text-xs text-teal-700 hover:underline" onClick={async () => {
+                      const r: any = await (window as any).api?.util?.printHTML?.(cashUpHTML(c, shop));
+                      if (r && !r.ok && r.error !== 'CANCELLED') toast.error(r.message || 'Could not print');
+                    }}>Print</button>
+                  </td>
+                </tr>))}</tbody>
+            </table>
+          )}
+        </div>
+      )}
+
       {reportType === 'profit' && !loading && (
         <div className="flex-1 min-h-0"><ProfitReport data={profit} darkMode={dm} /></div>
       )}
 
-      <div className={`flex-1 min-h-0 overflow-auto space-y-6 ${reportType === 'profit' ? 'hidden' : ''}`}>
+      <div className={`flex-1 min-h-0 overflow-auto space-y-6 ${['profit', 'reorder', 'returns', 'cashups'].includes(reportType) ? 'hidden' : ''}`}>
 
       {/* Sales Summary */}
       {reportType === 'sales' && !loading && (

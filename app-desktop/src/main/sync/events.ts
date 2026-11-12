@@ -13,13 +13,14 @@
  *   - Every event carries a unique id and is applied at most once, so syncing
  *     twice is harmless.
  */
+import { requestSync } from './auto.js';
 import { getDb } from '../db/index.js';
 import { randomUUID } from 'crypto';
 import log from '../log.js';
 import { recomputeStock } from '../db/batches.js';
 import { skuForIncoming } from '../db/sku.js';
 
-export type EventType = 'product.upsert' | 'product.delete' | 'stock.delta' | 'sale.created' | 'grn.created' | 'grn.voided';
+export type EventType = 'product.upsert' | 'product.delete' | 'stock.delta' | 'sale.created' | 'grn.created' | 'grn.voided' | 'sale.returned' | 'cashup.created';
 
 export interface SyncEvent {
   id: string;
@@ -65,6 +66,8 @@ export function recordEvent(type: EventType, payload: any): void {
     const db = getDb();
     db.prepare('INSERT INTO sync_events (id,device,type,ts,payload,pushed) VALUES (?,?,?,?,?,0)')
       .run(randomUUID(), device, type, new Date().toISOString(), JSON.stringify(payload));
+    // Something changed here: send it soon rather than waiting to be asked.
+    requestSync();
   } catch (err: any) {
     // Recording must never break the operation the user actually asked for.
     log.error('[sync] could not record event', type, err?.message || String(err));
@@ -247,6 +250,36 @@ export function applyEvent(ev: SyncEvent): string | null {
       if (!p.id) break;
       db.prepare('UPDATE grns SET voided_at = COALESCE(voided_at, ?), void_reason = COALESCE(void_reason, ?) WHERE id = ?')
         .run(p.voided_at || ev.ts, p.void_reason ?? null, p.id);
+      break;
+    }
+
+    case 'sale.returned': {
+      // The money side of a return. Units that went back on the shelf arrive
+      // as their own stock.delta events.
+      if (!p.id) break;
+      if (db.prepare('SELECT 1 AS x FROM sale_returns WHERE id = ?').get(p.id)) break;
+      db.prepare(`INSERT INTO sale_returns (id,return_no,sale_id,receipt_no,refund_total,method,reason,created_by,created_by_name,approved_by,device,created_at)
+                  VALUES (?,?,?,?,?,?,?,?,?,?,?,?)`)
+        .run(p.id, p.return_no ?? null, p.sale_id, p.receipt_no ?? null, p.refund_total ?? 0, p.method || 'cash', p.reason ?? null,
+             null, p.created_by_name ?? null, p.approved_by ?? null, p.device || ev.device, p.created_at || ev.ts);
+      for (const it of p.items || []) {
+        db.prepare(`INSERT OR IGNORE INTO sale_return_items (id,return_id,sale_item_id,product_id,product_name,batch_id,qty,unit_price,refund,unit_cost,restocked)
+                    VALUES (?,?,?,?,?,?,?,?,?,?,?)`)
+          .run(it.id || randomUUID(), p.id, it.sale_item_id ?? null, it.product_id ?? null, it.product_name ?? null, it.batch_id ?? null,
+               it.qty ?? 0, it.unit_price ?? null, it.refund ?? 0, it.unit_cost ?? null, it.restocked ? 1 : 0);
+      }
+      db.prepare('UPDATE sales SET refunded = ROUND(COALESCE(refunded,0) + ?, 2) WHERE id = ?').run(p.refund_total ?? 0, p.sale_id);
+      break;
+    }
+
+    case 'cashup.created': {
+      if (!p.id) break;
+      db.prepare(`INSERT OR IGNORE INTO cash_ups (id,period_start,period_end,float_amount,cash_sales,card_sales,cash_refunds,card_refunds,sales_count,
+                  expected_cash,counted_cash,difference,denominations,notes,created_by,created_by_name,device,created_at)
+                  VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`)
+        .run(p.id, p.period_start, p.period_end, p.float_amount ?? 0, p.cash_sales ?? 0, p.card_sales ?? 0, p.cash_refunds ?? 0,
+             p.card_refunds ?? 0, p.sales_count ?? 0, p.expected_cash ?? 0, p.counted_cash ?? 0, p.difference ?? 0,
+             p.denominations ?? null, p.notes ?? null, null, p.created_by_name ?? null, p.device || ev.device, p.created_at || ev.ts);
       break;
     }
   }

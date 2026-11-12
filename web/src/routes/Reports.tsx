@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
 import { lkr, lkrShort, dayName, startOfDay, startOfMonth } from '../lib/format';
 import { Spinner, Empty, ErrorNote, Stat } from '../components/ui';
+import { load as loadOwner } from '../lib/owner';
 
 type Range = '7' | '30' | 'month';
 
@@ -18,6 +19,7 @@ export default function Reports() {
   const [range, setRange] = useState<Range>('7');
   const [rows, setRows] = useState<Row[] | null>(null);
   const [lines, setLines] = useState<Line[]>([]);
+  const [refunds, setRefunds] = useState<any[]>([]);
   const [error, setError] = useState<string | null>(null);
 
   const load = useCallback(async () => {
@@ -36,6 +38,8 @@ export default function Reports() {
       .limit(5000);
     if (error) { setError(error.message); return; }
     const sales = (data || []) as Row[];
+    const rets = await loadOwner<any>('sale_returns', 'refund_total,created_at', from);
+    setRefunds(rets.rows);
     setRows(sales);
 
     if (sales.length === 0) { setLines([]); return; }
@@ -74,13 +78,15 @@ export default function Reports() {
       {error ? <ErrorNote error={error} onRetry={load} />
         : !rows ? <Spinner label="Adding it up…" />
         : rows.length === 0 ? <Empty icon="📊" title="No sales in this period" body="Once the till syncs, its takings show up here." />
-        : <Body rows={rows} lines={lines} />}
+        : <Body rows={rows} lines={lines} refunds={refunds} />}
     </div>
   );
 }
 
-function Body({ rows, lines }: { rows: Row[]; lines: Line[] }) {
-  const takings = rows.reduce((a, r) => a + Number(r.total || 0), 0);
+function Body({ rows, lines, refunds }: { rows: Row[]; lines: Line[]; refunds: any[] }) {
+  // Refunds come off the day the money went back.
+  const refunded = refunds.reduce((a, r) => a + Number(r.refund_total || 0), 0);
+  const takings = rows.reduce((a, r) => a + Number(r.total || 0), 0) - refunded;
   const discounts = rows.reduce((a, r) => a + Number(r.discount_amount || 0), 0);
   const average = rows.length ? takings / rows.length : 0;
 
@@ -91,6 +97,12 @@ function Body({ rows, lines }: { rows: Row[]; lines: Line[] }) {
     d.setHours(0, 0, 0, 0);
     const k = d.toISOString();
     byDay.set(k, (byDay.get(k) || 0) + Number(r.total || 0));
+  }
+  for (const x of refunds) {
+    const d = new Date(x.created_at);
+    d.setHours(0, 0, 0, 0);
+    const k = d.toISOString();
+    byDay.set(k, (byDay.get(k) || 0) - Number(x.refund_total || 0));
   }
   const days = [...byDay.entries()].sort((a, b) => a[0].localeCompare(b[0]));
   const peak = Math.max(...days.map((d) => d[1]), 1);

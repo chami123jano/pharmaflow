@@ -8,12 +8,16 @@ import Today from './routes/Today';
 import Reports from './routes/Reports';
 import Products from './routes/Products';
 import Stock from './routes/Stock';
+import Profit from './routes/Profit';
+import Deliveries from './routes/Deliveries';
 
-type Page = 'today' | 'reports' | 'products' | 'stock';
+type Page = 'today' | 'reports' | 'profit' | 'deliveries' | 'products' | 'stock';
 
 const PAGES: { key: Page; label: string; icon: string; ownerOnly?: boolean }[] = [
   { key: 'today', label: 'Today', icon: '●', ownerOnly: true },
   { key: 'reports', label: 'Reports', icon: '▤', ownerOnly: true },
+  { key: 'profit', label: 'Profit', icon: '◔', ownerOnly: true },
+  { key: 'deliveries', label: 'Deliveries', icon: '⇣', ownerOnly: true },
   { key: 'products', label: 'Products', icon: '◇' },
   { key: 'stock', label: 'Stock', icon: '▦' },
 ];
@@ -85,6 +89,8 @@ export default function App() {
       <main className="mx-auto max-w-3xl px-4 py-5">
         {current === 'today' && <Today />}
         {current === 'reports' && <Reports />}
+        {current === 'profit' && <Profit />}
+        {current === 'deliveries' && <Deliveries />}
         {current === 'products' && <Products />}
         {current === 'stock' && <Stock />}
       </main>

@@ -90,6 +90,11 @@ ipcMain.handle('pos:void', (_e, saleId: string, reason?: string, userId?: string
   const sale = db.prepare('SELECT * FROM sales WHERE id = ?').get(saleId) as any;
   if (!sale) return { ok: false, error: 'NOT_FOUND' };
   if (sale.voided_at) return { ok: false, error: 'ALREADY_VOIDED' };
+  // Part of it has already been given back; cancelling the rest would put the
+  // returned units on the shelf twice. Return the remaining items instead.
+  if (Number(sale.refunded || 0) > 0) {
+    return { ok: false, error: 'HAS_RETURNS', message: 'Part of this bill was already returned. Use Return for the rest instead of cancelling.' };
+  }
 
   const items = db.prepare('SELECT * FROM sale_items WHERE sale_id = ?').all(saleId) as any[];
   if (!items.length) return { ok: false, error: 'NO_ITEMS' };

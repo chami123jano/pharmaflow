@@ -17,6 +17,7 @@ import { getDeviceId, getDeviceLabel, unpushedEvents, markPushed, applyEvent } f
 import { checkAccess, parseRepo, pushEvents, pullEvents, type RepoConfig } from '../sync/github.js';
 import * as cloud from '../sync/supabase.js';
 import { buildSnapshot } from '../sync/snapshot.js';
+import { setSyncRunner, syncNow } from '../sync/auto.js';
 
 type Provider = 'github' | 'supabase';
 
@@ -315,7 +316,7 @@ async function runCloud() {
  * means a failure part-way still leaves this machine strictly more up to date,
  * never less.
  */
-ipcMain.handle('sync:run', async () => {
+async function runSync() {
   if (!configured()) return { ok: false, error: 'Sync is not set up yet' };
 
   try {
@@ -338,4 +339,7 @@ ipcMain.handle('sync:run', async () => {
     log.error('[sync] run failed', msg);
     return { ok: false, error: msg };
   }
-});
+}
+
+setSyncRunner(runSync);
+ipcMain.handle('sync:run', () => syncNow());
