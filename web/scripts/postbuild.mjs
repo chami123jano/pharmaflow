@@ -78,3 +78,14 @@ manifest.name = shop;
 manifest.short_name = shop.length > 12 ? shop.split(/\s+/)[0] : shop;
 writeFileSync(manifestPath, JSON.stringify(manifest, null, 2));
 console.log('[postbuild] manifest name =', shop);
+
+// The title and home-screen name in index.html, for the same reason: the tab
+// (and any shared link's preview) said "PharmaFlow" until the script ran.
+const indexPath = resolve(root, 'dist/index.html');
+const esc = (t) => t.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;');
+let html = readFileSync(indexPath, 'utf8');
+html = html.replace(/<title>[^<]*<\/title>/, `<title>${esc(shop)}</title>`)
+           .replace(/(name="apple-mobile-web-app-title" content=")[^"]*"/, `$1${esc(shop)}"`)
+           .replace(/(name="theme-color" content=")[^"]*"/, '$1#081a2e"');
+writeFileSync(indexPath, html);
+console.log('[postbuild] index.html title =', shop);

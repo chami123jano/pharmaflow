@@ -36,9 +36,16 @@ interface Draft {
   invoice_total: string;
   notes: string;
   lines: Line[];
+  /** How this delivery is paid: at the door, or on credit for so many days. */
+  pay_mode?: 'paid' | 'credit';
+  pay_days?: string;
+  pay_method?: 'cash' | 'cheque' | 'bank';
+  cheque_no?: string;
+  cheque_date?: string;
 }
 
-const EMPTY: Draft = { supplier_id: '', invoice_no: '', invoice_date: '', invoice_total: '', notes: '', lines: [] };
+const EMPTY: Draft = { supplier_id: '', invoice_no: '', invoice_date: '', invoice_total: '', notes: '', lines: [],
+  pay_mode: 'paid', pay_days: '30', pay_method: 'cash', cheque_no: '', cheque_date: '' };
 const DRAFT_KEY = 'grnDraft';
 const NEW_SUPPLIER = '__new__';
 
@@ -208,6 +215,10 @@ export default function Receive({ user, darkMode }: { user?: any; darkMode?: boo
         notes: draft.notes,
         created_by: user?.id,
         allow_duplicate_invoice: allowDuplicate,
+        payment: {
+          mode: draft.pay_mode || 'paid', days: Number(draft.pay_days || 0),
+          method: draft.pay_method || 'cash', cheque_no: draft.cheque_no, cheque_date: draft.cheque_date || null, remember: true,
+        },
         items: draft.lines.map((l) => ({
           product_id: l.product_id, qty: num(l.qty), free_qty: num(l.free_qty),
           cost_price: l.cost.trim() === '' ? null : Number(l.cost),
@@ -215,7 +226,9 @@ export default function Receive({ user, darkMode }: { user?: any; darkMode?: boo
         })),
       });
       if (r?.ok) {
-        toast.success(`${grnNo(r.data.grn_no)} saved — ${r.data.unit_count} units on the shelf`);
+        const b = r.data.bill;
+        toast.success(`${grnNo(r.data.grn_no)} saved — ${r.data.unit_count} units on the shelf`
+          + (b && Number(b.paid) < Number(b.amount) ? ` · ${formatLKR(b.amount)} to pay by ${new Date(b.due_date + 'T00:00:00').toLocaleDateString('en-GB', { day: '2-digit', month: 'short' })}` : ''));
         setDraft(EMPTY);
         loadProducts();
         window.dispatchEvent(new CustomEvent('ph:data:changed', { detail: { area: 'products' } }));
@@ -339,7 +352,13 @@ export default function Receive({ user, darkMode }: { user?: any; darkMode?: boo
               ) : (
                 <Select aria-label="Supplier" value={draft.supplier_id} placeholder="Choose supplier…" searchable
                   options={supplierOptions}
-                  onChange={(v) => { if (v === NEW_SUPPLIER) setAddingSupplier(true); else set({ supplier_id: v }); }} />
+                  onChange={(v) => {
+                    if (v === NEW_SUPPLIER) { setAddingSupplier(true); return; }
+                    // Their usual terms, if this supplier has given credit before.
+                    const sup = suppliers.find((x) => x.id === v);
+                    const days = sup?.credit_days;
+                    set(days ? { supplier_id: v, pay_mode: 'credit', pay_days: String(days) } : { supplier_id: v });
+                  }} />
               )}
             </div>
             <div>
@@ -457,8 +476,50 @@ export default function Receive({ user, darkMode }: { user?: any; darkMode?: boo
               )}
             </div>
 
+            {/* How it is paid. Makes the supplier bill when the note is saved. */}
+            <div className={`shrink-0 border-t ${t.border} px-4 pt-3 flex items-center gap-3 flex-wrap text-sm`}>
+              <span className={`text-[11px] uppercase tracking-wider font-semibold ${t.muted}`}>Payment</span>
+              <div role="radiogroup" aria-label="Payment" className={`grid grid-cols-2 p-1 rounded-xl border ${dm ? 'bg-slate-800 border-slate-600' : 'bg-slate-100 border-slate-200'}`}>
+                {([['paid', 'Paid now'], ['credit', 'On credit']] as const).map(([k, l]) => (
+                  <button key={k} type="button" role="radio" aria-checked={(draft.pay_mode || 'paid') === k} onClick={() => set({ pay_mode: k })}
+                    className={`px-3 py-1 rounded-lg text-sm font-semibold ${(draft.pay_mode || 'paid') === k ? (dm ? 'bg-slate-600 text-white' : 'bg-white text-slate-900 shadow-sm') : t.muted}`}>{l}</button>
+                ))}
+              </div>
+              {(draft.pay_mode || 'paid') === 'credit' ? (
+                <>
+                  {['30', '45', '60'].map((d) => (
+                    <button key={d} type="button" onClick={() => set({ pay_days: d })}
+                      className={`px-2.5 py-1 rounded-lg border text-sm font-semibold ${draft.pay_days === d ? 'bg-teal-700 border-teal-700 text-white' : `${t.border} ${t.muted}`}`}>{d} days</button>
+                  ))}
+                  <input inputMode="numeric" aria-label="Credit days" className={`${cell} !w-20 text-right`} value={draft.pay_days || ''}
+                    onChange={(e) => set({ pay_days: e.target.value.replace(/\D/g, '') })} />
+                  <span className={t.muted}>days ·</span>
+                  <span className={`font-semibold ${t.page}`}>
+                    due {(() => {
+                      const start = draft.invoice_date || new Date().toLocaleDateString('en-CA');
+                      const d = new Date(start + 'T00:00:00'); d.setDate(d.getDate() + Number(draft.pay_days || 0));
+                      return d.toLocaleDateString('en-GB', { weekday: 'short', day: '2-digit', month: 'short', year: 'numeric' });
+                    })()}
+                  </span>
+                </>
+              ) : (
+                <>
+                  {(['cash', 'cheque', 'bank'] as const).map((m) => (
+                    <button key={m} type="button" onClick={() => set({ pay_method: m })}
+                      className={`px-2.5 py-1 rounded-lg border text-sm font-semibold capitalize ${(draft.pay_method || 'cash') === m ? 'bg-teal-700 border-teal-700 text-white' : `${t.border} ${t.muted}`}`}>{m === 'bank' ? 'Bank transfer' : m}</button>
+                  ))}
+                  {draft.pay_method === 'cheque' && (
+                    <>
+                      <input aria-label="Cheque number" placeholder="Cheque no." className={`${cell} !w-32`} value={draft.cheque_no || ''} onChange={(e) => set({ cheque_no: e.target.value })} />
+                      <input aria-label="Cheque date" type="date" className={`${cell} !w-40`} value={draft.cheque_date || ''} onChange={(e) => set({ cheque_date: e.target.value })} />
+                    </>
+                  )}
+                </>
+              )}
+            </div>
+
             {/* Totals and save */}
-            <div className={`shrink-0 border-t ${t.border} p-4 flex items-center gap-4 flex-wrap`}>
+            <div className={`shrink-0 p-4 flex items-center gap-4 flex-wrap`}>
               <input className={`${t.input} flex-1 min-w-[220px]`} placeholder="Notes (optional) — e.g. 2 boxes damaged, credit note asked for"
                 value={draft.notes} onChange={(e) => set({ notes: e.target.value })} />
               <div className="flex items-center gap-5 tabular-nums">

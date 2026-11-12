@@ -29,6 +29,7 @@ import './ipc/batches.js';
 import './ipc/grn.js';
 import './ipc/returns.js';
 import './ipc/cashup.js';
+import './ipc/bills.js';
 import './ipc/contacts.js';
 import './ipc/sync.js';
 import { getDeviceId } from './sync/events.js';

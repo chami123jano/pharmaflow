@@ -72,6 +72,15 @@ const api = {
     save:    (payload: any) => ipcRenderer.invoke('cashup:save', payload) as Promise<IpcResult>,
     list:    (limit?: number) => ipcRenderer.invoke('cashup:list', limit) as Promise<IpcResult>,
   },
+  bills: {
+    list:        (opts?: { status?: 'unpaid' | 'paid' | 'all'; supplier_id?: string; search?: string }) => ipcRenderer.invoke('bills:list', opts) as Promise<IpcResult>,
+    summary:     () => ipcRenderer.invoke('bills:summary') as Promise<IpcResult>,
+    get:         (id: string) => ipcRenderer.invoke('bills:get', id) as Promise<IpcResult>,
+    create:      (payload: any) => ipcRenderer.invoke('bills:create', payload) as Promise<IpcResult>,
+    pay:         (payload: any) => ipcRenderer.invoke('bills:pay', payload) as Promise<IpcResult>,
+    voidPayment: (paymentId: string, userId: string) => ipcRenderer.invoke('bills:voidPayment', paymentId, userId) as Promise<IpcResult>,
+    void:        (billId: string, userId: string, reason?: string) => ipcRenderer.invoke('bills:void', billId, userId, reason) as Promise<IpcResult>,
+  },
   backup: {
     status:       () => ipcRenderer.invoke('backup:status') as Promise<IpcResult>,
     run:          () => ipcRenderer.invoke('backup:run') as Promise<IpcResult>,

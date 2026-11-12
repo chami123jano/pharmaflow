@@ -42,10 +42,11 @@ function createIn(kind: Kind, payload: any) {
   const now = new Date().toISOString();
 
   if (kind === 'suppliers') {
-    db.prepare(`INSERT INTO suppliers (id,name,phone,email,address,contact_person,notes,created_at,updated_at)
-                VALUES (?,?,?,?,?,?,?,?,?)`)
+    const days = payload?.credit_days === '' || payload?.credit_days == null ? null : Math.max(0, Math.round(Number(payload.credit_days)));
+    db.prepare(`INSERT INTO suppliers (id,name,phone,email,address,contact_person,notes,credit_days,created_at,updated_at)
+                VALUES (?,?,?,?,?,?,?,?,?,?)`)
       .run(id, name, phone || null, payload?.email || null, payload?.address || null,
-           payload?.contact_person || null, payload?.notes || null, now, now);
+           payload?.contact_person || null, payload?.notes || null, Number.isFinite(days as any) ? days : null, now, now);
   } else {
     db.prepare(`INSERT INTO customers (id,name,phone,email,address,notes,created_at,updated_at)
                 VALUES (?,?,?,?,?,?,?,?)`)
@@ -66,9 +67,10 @@ function updateIn(kind: Kind, id: string, patch: any) {
   if (!String(m.name || '').trim()) return { ok: false, error: 'NAME_REQUIRED', message: 'A name is required' };
 
   if (kind === 'suppliers') {
-    db.prepare(`UPDATE suppliers SET name=?,phone=?,email=?,address=?,contact_person=?,notes=?,updated_at=? WHERE id=?`)
+    const days = m.credit_days === '' || m.credit_days == null ? null : Math.max(0, Math.round(Number(m.credit_days)));
+    db.prepare(`UPDATE suppliers SET name=?,phone=?,email=?,address=?,contact_person=?,notes=?,credit_days=?,updated_at=? WHERE id=?`)
       .run(m.name, m.phone || null, m.email || null, m.address || null,
-           m.contact_person || null, m.notes || null, m.updated_at, id);
+           m.contact_person || null, m.notes || null, Number.isFinite(days as any) ? days : null, m.updated_at, id);
   } else {
     db.prepare(`UPDATE customers SET name=?,phone=?,email=?,address=?,notes=?,updated_at=? WHERE id=?`)
       .run(m.name, m.phone || null, m.email || null, m.address || null, m.notes || null, m.updated_at, id);
@@ -149,10 +151,14 @@ ipcMain.handle('suppliers:history', (_e, id: string, limit = 100) => {
       FROM product_batches b JOIN products p ON p.id = b.product_id
       WHERE b.supplier_id = ? ORDER BY b.created_at DESC LIMIT ?
     `).all(id, limit) as any[];
+    const bills = db.prepare(`SELECT * FROM supplier_bills WHERE supplier_id = ? AND voided_at IS NULL ORDER BY COALESCE(due_date, invoice_date) DESC LIMIT 100`).all(id) as any[];
+    const owed = bills.reduce((s, b) => s + Math.max(0, Number(b.amount || 0) - Number(b.paid || 0)), 0);
     return {
       ok: true,
       data: {
         batches: rows,
+        bills,
+        owed: Math.round(owed * 100) / 100,
         deliveries: rows.length,
         totalValue: rows.reduce((s, r) => s + Number(r.qty_received || 0) * Number(r.cost_price || 0), 0),
       },

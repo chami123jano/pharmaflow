@@ -71,7 +71,7 @@ export default function Profit() {
       <div className="flex gap-2">
         {RANGES.map((r) => (
           <button key={r.key} onClick={() => setRange(r.key)}
-            className={`flex-1 rounded-xl px-2 py-2 text-sm font-bold transition ${range === r.key ? 'bg-blue-600 text-white' : 'card muted'}`}>{r.label}</button>
+            className={`flex-1 rounded-xl px-2 py-2 text-sm font-bold transition ${range === r.key ? 'bg-teal-700 text-white' : 'card muted'}`}>{r.label}</button>
         ))}
       </div>
       {error ? <ErrorNote error={error} onRetry={run} />
@@ -82,7 +82,7 @@ export default function Profit() {
           <>
             <div className="grid grid-cols-2 gap-3">
               <Stat label="Gross profit" value={lkr(profit)} sub={res.t.costed > 0 ? `${((profit / res.t.costed) * 100).toFixed(1)}% margin` : 'No costs yet'}
-                tone={profit < 0 ? 'text-red-500' : 'text-emerald-500'} />
+                tone={profit < 0 ? 'text-red-500' : 'text-lime-500'} />
               <Stat label="Sales" value={lkr(res.t.revenue)} sub={`${res.bills} bills${res.t.refunds ? ` · ${lkr(res.t.refunds)} refunded` : ''}`} />
               <Stat label="Cost of goods" value={lkr(res.t.cost)} sub="What those items cost you" />
               <Stat label="No cost price" value={lkr(res.t.uncosted)} sub="Sales left out of profit" tone={res.t.uncosted > 0 ? 'text-amber-500' : ''} />

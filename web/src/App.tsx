@@ -10,13 +10,15 @@ import Products from './routes/Products';
 import Stock from './routes/Stock';
 import Profit from './routes/Profit';
 import Deliveries from './routes/Deliveries';
+import Bills from './routes/Bills';
 
-type Page = 'today' | 'reports' | 'profit' | 'deliveries' | 'products' | 'stock';
+type Page = 'today' | 'reports' | 'profit' | 'bills' | 'deliveries' | 'products' | 'stock';
 
 const PAGES: { key: Page; label: string; icon: string; ownerOnly?: boolean }[] = [
   { key: 'today', label: 'Today', icon: '●', ownerOnly: true },
   { key: 'reports', label: 'Reports', icon: '▤', ownerOnly: true },
   { key: 'profit', label: 'Profit', icon: '◔', ownerOnly: true },
+  { key: 'bills', label: 'Bills', icon: '₨', ownerOnly: true },
   { key: 'deliveries', label: 'Deliveries', icon: '⇣', ownerOnly: true },
   { key: 'products', label: 'Products', icon: '◇' },
   { key: 'stock', label: 'Stock', icon: '▦' },
@@ -72,7 +74,7 @@ export default function App() {
                 key={p.key}
                 onClick={() => setPage(p.key)}
                 className={`rounded-lg px-3 py-1.5 text-sm font-semibold transition ${
-                  current === p.key ? 'bg-blue-600 text-white' : 'muted hover:opacity-70'
+                  current === p.key ? 'bg-teal-700 text-white' : 'muted hover:opacity-70'
                 }`}
               >
                 {p.label}
@@ -90,6 +92,7 @@ export default function App() {
         {current === 'today' && <Today />}
         {current === 'reports' && <Reports />}
         {current === 'profit' && <Profit />}
+        {current === 'bills' && <Bills />}
         {current === 'deliveries' && <Deliveries />}
         {current === 'products' && <Products />}
         {current === 'stock' && <Stock />}
@@ -105,7 +108,7 @@ export default function App() {
             key={p.key}
             onClick={() => setPage(p.key)}
             className={`flex flex-1 flex-col items-center gap-0.5 pt-2.5 text-[11px] font-bold transition ${
-              current === p.key ? 'text-blue-600 dark:text-blue-400' : 'faint'
+              current === p.key ? 'text-teal-700 dark:text-teal-300' : 'faint'
             }`}
           >
             <span className="text-base leading-none">{p.icon}</span>

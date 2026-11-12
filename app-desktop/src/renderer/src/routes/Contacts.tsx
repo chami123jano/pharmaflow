@@ -7,7 +7,7 @@ import { ui, pill } from '../lib/ui';
 
 type Kind = 'customers' | 'suppliers';
 
-const BLANK = { name: '', phone: '', email: '', address: '', contact_person: '', notes: '' };
+const BLANK = { name: '', phone: '', email: '', address: '', contact_person: '', notes: '', credit_days: '' };
 
 /**
  * Customers and suppliers share a screen because they are the same shape of
@@ -54,6 +54,7 @@ export default function Contacts({ user, darkMode }: { user?: any; darkMode?: bo
     setForm({
       name: row.name || '', phone: row.phone || '', email: row.email || '',
       address: row.address || '', contact_person: row.contact_person || '', notes: row.notes || '',
+      credit_days: row.credit_days != null ? String(row.credit_days) : '',
     });
     setEditing(row);
   }
@@ -174,6 +175,7 @@ export default function Contacts({ user, darkMode }: { user?: any; darkMode?: bo
                 {selected.email && <div>{selected.email}</div>}
                 {selected.address && <div>{selected.address}</div>}
                 {selected.contact_person && <div>Contact: {selected.contact_person}</div>}
+                {isSup && selected.credit_days ? <div>Usually gives {selected.credit_days} days' credit</div> : null}
               </div>
 
               {history && (
@@ -190,6 +192,28 @@ export default function Contacts({ user, darkMode }: { user?: any; darkMode?: bo
                       </div>
                     </div>
                   </div>
+
+                  {/* What is owed to this supplier, bill by bill. */}
+                  {isSup && (history.bills || []).length > 0 && (
+                    <div className={`mt-4 ${t.well} p-3`}>
+                      <div className="flex justify-between items-baseline">
+                        <span className={`text-[11px] uppercase tracking-wider ${t.faint}`}>You owe them</span>
+                        <span className={`text-lg font-bold tabular-nums ${history.owed > 0 ? 'text-red-600' : 'text-lime-700'}`}>{formatLKR(history.owed || 0)}</span>
+                      </div>
+                      <div className="mt-2 space-y-1">
+                        {(history.bills || []).slice(0, 8).map((b: any) => {
+                          const left = Math.max(0, Number(b.amount) - Number(b.paid));
+                          return (
+                            <div key={b.id} className="flex justify-between gap-2 text-sm">
+                              <span className={`truncate ${t.page}`}>{b.invoice_no || `Bill #${b.bill_no}`}</span>
+                              <span className={t.muted}>due {b.due_date ? new Date(b.due_date + 'T00:00:00').toLocaleDateString('en-GB', { day: '2-digit', month: 'short' }) : '—'}</span>
+                              <span className={`font-semibold tabular-nums ${left > 0.005 ? t.page : 'text-lime-700'}`}>{left > 0.005 ? formatLKR(left) : 'paid'}</span>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
 
                   <div className="mt-4 space-y-1.5 max-h-72 overflow-y-auto">
                     {/* The list is read defensively: a tab switch can render
@@ -248,11 +272,18 @@ export default function Contacts({ user, darkMode }: { user?: any; darkMode?: bo
                   onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))} />
               </div>
               {isSup && (
-                <div className="col-span-2">
-                  <label className={t.label}>Contact person</label>
-                  <input className={t.input} value={form.contact_person}
-                    onChange={(e) => setForm((f) => ({ ...f, contact_person: e.target.value }))} />
-                </div>
+                <>
+                  <div>
+                    <label className={t.label}>Contact person</label>
+                    <input className={t.input} value={form.contact_person}
+                      onChange={(e) => setForm((f) => ({ ...f, contact_person: e.target.value }))} />
+                  </div>
+                  <div>
+                    <label className={t.label}>Usual credit (days)</label>
+                    <input inputMode="numeric" className={t.input} value={(form as any).credit_days ?? ''} placeholder="e.g. 45 — blank if they want cash"
+                      onChange={(e) => setForm((f: any) => ({ ...f, credit_days: e.target.value.replace(/\D/g, '') }))} />
+                  </div>
+                </>
               )}
               <div className="col-span-2">
                 <label className={t.label}>Address</label>

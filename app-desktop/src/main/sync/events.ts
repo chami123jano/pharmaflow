@@ -20,7 +20,8 @@ import log from '../log.js';
 import { recomputeStock } from '../db/batches.js';
 import { skuForIncoming } from '../db/sku.js';
 
-export type EventType = 'product.upsert' | 'product.delete' | 'stock.delta' | 'sale.created' | 'grn.created' | 'grn.voided' | 'sale.returned' | 'cashup.created';
+export type EventType = 'product.upsert' | 'product.delete' | 'stock.delta' | 'sale.created' | 'grn.created' | 'grn.voided' | 'sale.returned' | 'cashup.created'
+  | 'bill.created' | 'bill.paid' | 'bill.payment_voided' | 'bill.voided';
 
 export interface SyncEvent {
   id: string;
@@ -272,6 +273,42 @@ export function applyEvent(ev: SyncEvent): string | null {
       break;
     }
 
+    // Supplier bills. Supplier ids differ between machines, so the local one is
+    // found by name; `paid` is always recomputed from the payments.
+    case 'bill.created': {
+      if (!p.id || db.prepare('SELECT 1 AS x FROM supplier_bills WHERE id = ?').get(p.id)) break;
+      const local = p.supplier_name
+        ? (db.prepare('SELECT id FROM suppliers WHERE lower(trim(name)) = lower(?)').get(String(p.supplier_name).trim()) as any)?.id || null : null;
+      db.prepare(`INSERT INTO supplier_bills (id,bill_no,supplier_id,supplier_name,grn_id,invoice_no,invoice_date,amount,paid,credit_days,due_date,notes,created_by,created_by_name,device,created_at)
+                  VALUES (?,?,?,?,?,?,?,?,0,?,?,?,?,?,?,?)`)
+        .run(p.id, p.bill_no ?? null, local, p.supplier_name ?? null, p.grn_id ?? null, p.invoice_no ?? null, p.invoice_date ?? null,
+             p.amount ?? 0, p.credit_days ?? null, p.due_date ?? null, p.notes ?? null, null, p.created_by_name ?? null, p.device || ev.device, p.created_at || ev.ts);
+      for (const x of p.payments || []) insertSyncedPayment(db, x, ev);
+      refreshBillPaid(db, p.id);
+      break;
+    }
+    case 'bill.paid': {
+      if (!p.id || !p.bill_id) break;
+      insertSyncedPayment(db, p, ev);
+      refreshBillPaid(db, p.bill_id);
+      break;
+    }
+    case 'bill.payment_voided': {
+      if (!p.id) break;
+      db.prepare('UPDATE supplier_payments SET voided_at = COALESCE(voided_at, ?), voided_by = COALESCE(voided_by, ?) WHERE id = ?')
+        .run(p.voided_at || ev.ts, p.voided_by ?? null, p.id);
+      if (p.bill_id) refreshBillPaid(db, p.bill_id);
+      break;
+    }
+    case 'bill.voided': {
+      if (!p.id) break;
+      db.prepare('UPDATE supplier_bills SET voided_at = COALESCE(voided_at, ?), void_reason = COALESCE(void_reason, ?) WHERE id = ?')
+        .run(p.voided_at || ev.ts, p.void_reason ?? null, p.id);
+      if (p.payments_voided) db.prepare('UPDATE supplier_payments SET voided_at = COALESCE(voided_at, ?) WHERE bill_id = ?').run(p.voided_at || ev.ts, p.id);
+      refreshBillPaid(db, p.id);
+      break;
+    }
+
     case 'cashup.created': {
       if (!p.id) break;
       db.prepare(`INSERT OR IGNORE INTO cash_ups (id,period_start,period_end,float_amount,cash_sales,card_sales,cash_refunds,card_refunds,sales_count,
@@ -287,4 +324,17 @@ export function applyEvent(ev: SyncEvent): string | null {
   db.prepare('INSERT OR IGNORE INTO sync_applied (event_id,device,applied_at) VALUES (?,?,?)')
     .run(ev.id, ev.device, now);
   return ev.type;
+}
+
+function insertSyncedPayment(db: any, x: any, ev: any) {
+  db.prepare(`INSERT OR IGNORE INTO supplier_payments (id,bill_id,amount,method,cheque_no,cheque_date,reference,paid_on,notes,source,created_by,created_by_name,device,created_at,voided_at,voided_by)
+              VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`)
+    .run(x.id, x.bill_id, x.amount ?? 0, x.method || 'cash', x.cheque_no ?? null, x.cheque_date ?? null, x.reference ?? null,
+         x.paid_on || String(x.created_at || ev.ts).slice(0, 10), x.notes ?? null, x.source ?? null, null, x.created_by_name ?? null,
+         x.device || ev.device, x.created_at || ev.ts, x.voided_at ?? null, x.voided_by ?? null);
+}
+
+function refreshBillPaid(db: any, billId: string) {
+  const row = db.prepare('SELECT COALESCE(SUM(amount),0) AS n FROM supplier_payments WHERE bill_id = ? AND voided_at IS NULL').get(billId) as any;
+  db.prepare('UPDATE supplier_bills SET paid = ? WHERE id = ?').run(Math.round(Number(row?.n || 0) * 100) / 100, billId);
 }

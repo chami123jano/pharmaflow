@@ -140,7 +140,7 @@ export interface Snapshot {
   saleItems: any[];
   customers: any[];
   suppliers: any[];
-  extras?: { grns: any[]; grnItems: any[]; returns: any[]; returnItems: any[]; cashUps: any[] };
+  extras?: { grns: any[]; grnItems: any[]; returns: any[]; returnItems: any[]; cashUps: any[]; bills: any[]; billPayments: any[] };
 }
 
 /** Drops the given keys from every row — for a cloud table not yet given the new columns. */
@@ -200,6 +200,7 @@ export async function pushSnapshot(cfg: CloudConfig, snap: Snapshot): Promise<vo
       ['grns', snap.extras.grns], ['grn_items', snap.extras.grnItems],
       ['sale_returns', snap.extras.returns], ['sale_return_items', snap.extras.returnItems],
       ['cash_ups', snap.extras.cashUps],
+      ['supplier_bills', snap.extras.bills], ['supplier_payments', snap.extras.billPayments],
     ];
     for (const [table, rows] of parts) {
       if (!rows.length) continue;

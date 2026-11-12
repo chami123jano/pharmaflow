@@ -3,7 +3,7 @@ import type { ReactNode } from 'react';
 export function Spinner({ label }: { label?: string }) {
   return (
     <div className="flex flex-col items-center justify-center gap-3 py-16">
-      <div className="h-7 w-7 animate-spin rounded-full border-2 border-slate-300 border-t-blue-600" />
+      <div className="h-7 w-7 animate-spin rounded-full border-2 border-slate-300 border-t-teal-600" />
       {label && <p className="muted text-sm">{label}</p>}
     </div>
   );
@@ -34,9 +34,9 @@ export function ErrorNote({ error, onRetry }: { error: string; onRetry?: () => v
 const TONES: Record<string, string> = {
   bad: 'bg-red-100 text-red-700 dark:bg-red-950 dark:text-red-300',
   warn: 'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300',
-  ok: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300',
+  ok: 'bg-lime-100 text-lime-800 dark:bg-lime-950 dark:text-lime-300',
   none: 'bg-slate-200 text-slate-600 dark:bg-slate-800 dark:text-slate-400',
-  info: 'bg-blue-100 text-blue-700 dark:bg-blue-950 dark:text-blue-300',
+  info: 'bg-teal-100 text-teal-800 dark:bg-teal-950 dark:text-teal-300',
 };
 
 export function Pill({ tone = 'none', children }: { tone?: keyof typeof TONES | string; children: ReactNode }) {

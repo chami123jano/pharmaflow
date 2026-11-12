@@ -208,6 +208,13 @@ export default function Sales({ user, tokens, darkMode }: { user: any; tokens?: 
    */
   function goPayment() {
     if (needsApproval && !approvedBy) {
+      // An admin at the till is the approval: asking them for their own
+      // password again only slowed the counter down. It is still recorded.
+      if (String(user?.role || '').toLowerCase() === 'admin') {
+        setApprovedBy(user?.name || user?.username || 'Admin');
+        setStage('payment');
+        return;
+      }
       setAskPassword(true);
       setPassword('');
       setTimeout(() => pwRef.current?.focus(), 60);
@@ -714,7 +721,7 @@ export default function Sales({ user, tokens, darkMode }: { user: any; tokens?: 
         <div className={`${panel('billing')} px-4 py-3`}>
           <div className="flex items-center justify-between mb-2">
             <h3 className={`text-sm font-bold ${tp}`}>Discount</h3>
-            <span className={`text-[11px] ${ts}`}>over {approvalLimit}% needs admin</span>
+            <span className={`text-[11px] ${ts}`}>{String(user?.role).toLowerCase() === 'admin' ? `over ${approvalLimit}% is noted as yours` : `over ${approvalLimit}% needs admin`}</span>
           </div>
           <div className="flex gap-2">
             <div role="radiogroup" aria-label="Discount type"

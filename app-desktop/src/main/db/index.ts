@@ -186,6 +186,25 @@ export async function ensureSchema() {
   d.prepare('CREATE INDEX IF NOT EXISTS idx_return_items_return ON sale_return_items(return_id)').run();
   d.prepare('CREATE INDEX IF NOT EXISTS idx_return_items_line   ON sale_return_items(sale_item_id)').run();
 
+  // Supplier bills: what the shop owes for a delivery, when it is due, and
+  // every payment made against it — part payments included. `paid` is kept as
+  // the sum of the bill's live payments, so lists never have to add them up.
+  ensureColumn(d, 'suppliers', 'credit_days', 'INTEGER');
+  ensureTable(d, 'supplier_bills', `CREATE TABLE IF NOT EXISTS supplier_bills (
+    id TEXT PRIMARY KEY, bill_no INTEGER, supplier_id TEXT, supplier_name TEXT, grn_id TEXT,
+    invoice_no TEXT, invoice_date TEXT, amount REAL NOT NULL DEFAULT 0, paid REAL NOT NULL DEFAULT 0,
+    credit_days INTEGER, due_date TEXT, notes TEXT, created_by TEXT, created_by_name TEXT, device TEXT,
+    created_at TEXT NOT NULL, voided_at TEXT, void_reason TEXT)`);
+  d.prepare('CREATE INDEX IF NOT EXISTS idx_bills_due      ON supplier_bills(due_date)').run();
+  d.prepare('CREATE INDEX IF NOT EXISTS idx_bills_supplier ON supplier_bills(supplier_id)').run();
+  d.prepare('CREATE INDEX IF NOT EXISTS idx_bills_grn      ON supplier_bills(grn_id)').run();
+  ensureTable(d, 'supplier_payments', `CREATE TABLE IF NOT EXISTS supplier_payments (
+    id TEXT PRIMARY KEY, bill_id TEXT NOT NULL, amount REAL NOT NULL, method TEXT NOT NULL DEFAULT 'cash',
+    cheque_no TEXT, cheque_date TEXT, reference TEXT, paid_on TEXT NOT NULL, notes TEXT, source TEXT,
+    created_by TEXT, created_by_name TEXT, device TEXT, created_at TEXT NOT NULL, voided_at TEXT, voided_by TEXT,
+    FOREIGN KEY (bill_id) REFERENCES supplier_bills(id) ON DELETE CASCADE)`);
+  d.prepare('CREATE INDEX IF NOT EXISTS idx_payments_bill ON supplier_payments(bill_id)').run();
+
   // End-of-day cash-ups: what the drawer should hold, what was counted, and
   // the difference. Each covers the time since the previous one on this PC.
   ensureTable(d, 'cash_ups', `CREATE TABLE IF NOT EXISTS cash_ups (

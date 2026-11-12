@@ -18,13 +18,14 @@ const IconReceipt = () => svg(<><path d="M4 2v20l2.5-1.5L9 22l2.5-1.5L14 22l2.5-
 const IconClock = () => svg(<><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></>);
 
 function StatCard({ label, value, sub, color, bg, icon }: Stat) {
+  // dark: variants, because these boxes stayed bright white in dark mode.
   return (
-    <div className="bg-white rounded-2xl shadow-sm border border-slate-100 px-5 py-4 flex items-start gap-4 hover:shadow-md transition-shadow">
-      <div className={`w-12 h-12 rounded-xl ${bg} flex items-center justify-center ${color} shrink-0`}>{icon}</div>
+    <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-700 px-5 py-4 flex items-start gap-4 hover:shadow-md transition-shadow">
+      <div className={`w-12 h-12 rounded-xl ${bg} dark:bg-white/5 flex items-center justify-center ${color} shrink-0`}>{icon}</div>
       <div className="flex-1 min-w-0">
-        <p className="text-sm text-slate-500 font-medium">{label}</p>
+        <p className="text-sm text-slate-500 dark:text-slate-400 font-medium">{label}</p>
         <p className={`text-2xl font-bold mt-1 ${color}`}>{value}</p>
-        {sub && <p className="text-xs text-slate-400 mt-0.5">{sub}</p>}
+        {sub && <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">{sub}</p>}
       </div>
     </div>
   );
@@ -52,8 +53,8 @@ export default function Dashboard({ user, tokens, onQuickNav, darkMode }: { user
       // Is the website current, and is there a backup? Owner's question only.
       if (user?.role === 'admin') {
         try {
-          const [sy, bk]: any[] = await Promise.all([window.api?.sync?.status?.(), (window as any).api?.backup?.status?.()]);
-          setHealth({ sync: sy?.data || null, backup: bk?.data || null });
+          const [sy, bk, bl]: any[] = await Promise.all([window.api?.sync?.status?.(), (window as any).api?.backup?.status?.(), (window as any).api?.bills?.summary?.()]);
+          setHealth({ sync: sy?.data || null, backup: bk?.data || null, bills: bl?.data || null });
         } catch {}
       }
       // Today's profit is for the owner; the counter staff see takings only.
@@ -123,7 +124,7 @@ export default function Dashboard({ user, tokens, onQuickNav, darkMode }: { user
         <div>
           <h1 className="text-lg font-bold leading-tight">Welcome back, {user?.name || 'Admin'}</h1>
           <p className="text-navy-100 text-xs">Here is what is happening at your pharmacy today.</p>
-          {health && <HealthLine health={health} />}
+          {health && <HealthLine health={health} onBills={() => onQuickNav?.('bills')} />}
         </div>
         <div className="flex gap-2">
           <button onClick={() => onQuickNav?.('sales')} className="px-3.5 py-2 bg-white text-teal-700 rounded-lg text-sm font-semibold hover:bg-teal-50 transition-colors">New Sale</button>
@@ -135,11 +136,13 @@ export default function Dashboard({ user, tokens, onQuickNav, darkMode }: { user
       {/* Stats */}
       <div className="shrink-0 grid grid-cols-2 lg:grid-cols-4 gap-4">
         <StatCard label="Total Products" value={stats.totalProducts ?? 0} icon={<IconBox />} color="text-teal-700" bg="bg-teal-50" />
-        <StatCard label="Low Stock Items" value={stats.lowStock ?? 0} sub="Need reorder" icon={<IconAlert />} color="text-orange-600" bg="bg-orange-50" />
+        <StatCard label="Low Stock Items" value={stats.lowStock ?? 0} sub="Need reorder" icon={<IconAlert />}
+          color={(stats.lowStock ?? 0) > 0 ? 'text-orange-600' : 'text-slate-500'} bg={(stats.lowStock ?? 0) > 0 ? 'bg-orange-50' : 'bg-slate-100'} />
         <StatCard label="Sales Today" value={formatLKR(stats.salesTotal ?? 0)} sub={stats.profit
           ? `${stats.transactions ?? 0} bill${stats.transactions === 1 ? '' : 's'} · profit ${formatLKR(stats.profit.profit)}${stats.profit.uncostedRevenue > 0 ? '*' : ''}`
           : `${stats.transactions ?? 0} transactions`} icon={<IconReceipt />} color="text-lime-700" bg="bg-lime-50" />
-        <StatCard label="Expiring Soon" value={stats.nearExpiry ?? 0} sub="Within 30 days" icon={<IconClock />} color="text-red-600" bg="bg-red-50" />
+        <StatCard label="Expiring Soon" value={stats.nearExpiry ?? 0} sub="Within 30 days" icon={<IconClock />}
+          color={(stats.nearExpiry ?? 0) > 0 ? 'text-red-600' : 'text-slate-500'} bg={(stats.nearExpiry ?? 0) > 0 ? 'bg-red-50' : 'bg-slate-100'} />
       </div>
 
       {/* Charts + Alerts row */}
@@ -264,7 +267,7 @@ export default function Dashboard({ user, tokens, onQuickNav, darkMode }: { user
 }
 
 /** "Synced 3 min ago · Backed up 2:05 pm" — and says so plainly when either has stopped. */
-function HealthLine({ health }: { health: any }) {
+function HealthLine({ health, onBills }: { health: any; onBills?: () => void }) {
   const ago = (iso?: string | null) => {
     if (!iso) return null;
     const m = Math.round((Date.now() - new Date(iso).getTime()) / 60000);
@@ -288,6 +291,16 @@ function HealthLine({ health }: { health: any }) {
           title={sy.lastResult || ''}>
           {failed ? `Website not updating — last worked ${ago(sy.lastSync) || "never"}` : `Website synced ${ago(sy.lastSync) || 'not yet'}`}
         </span>
+      )}
+      {health.bills?.overdueCount > 0 && (
+        <button onClick={() => onBills?.()} className="px-2 py-0.5 rounded-full bg-red-500/25 text-red-100 hover:bg-red-500/35">
+          {health.bills.overdueCount} supplier bill{health.bills.overdueCount === 1 ? '' : 's'} overdue · {formatLKR(health.bills.overdue)}
+        </button>
+      )}
+      {health.bills?.dueWeekCount > 0 && (
+        <button onClick={() => onBills?.()} className={`px-2 py-0.5 rounded-full ${bad} hover:opacity-80`}>
+          {health.bills.dueWeekCount} due this week · {formatLKR(health.bills.dueWeek)}
+        </button>
       )}
       {bk && (
         <span className={`px-2 py-0.5 rounded-full ${bk.lastError || !bk.last ? bad : good}`} title={bk.folder}>

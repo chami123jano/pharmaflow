@@ -379,3 +379,55 @@ begin
     execute format('revoke all on %I from anon', t);
   end loop;
 end $$;
+
+-- -------------------------------------------------------- supplier bills ---
+-- What the shop owes suppliers, when it is due, and every payment (part
+-- payments included). Owner only, like everything above.
+create table if not exists supplier_bills (
+  id              uuid primary key,
+  bill_no         integer,
+  supplier_name   text,
+  grn_id          uuid,
+  invoice_no      text,
+  invoice_date    date,
+  amount          numeric(12,2) not null default 0,
+  paid            numeric(12,2) not null default 0,
+  credit_days     integer,
+  due_date        date,
+  notes           text,
+  created_by_name text,
+  device_id       text,
+  created_at      timestamptz not null default now(),
+  voided_at       timestamptz,
+  void_reason     text
+);
+create index if not exists supplier_bills_due_idx on supplier_bills (due_date);
+
+create table if not exists supplier_payments (
+  id              uuid primary key,
+  bill_id         uuid not null references supplier_bills(id) on delete cascade,
+  amount          numeric(12,2) not null,
+  method          text,
+  cheque_no       text,
+  cheque_date     date,
+  reference       text,
+  paid_on         date,
+  notes           text,
+  created_by_name text,
+  created_at      timestamptz not null default now(),
+  voided_at       timestamptz
+);
+create index if not exists supplier_payments_bill_idx on supplier_payments (bill_id);
+
+do $$
+declare t text;
+begin
+  foreach t in array array['supplier_bills','supplier_payments'] loop
+    execute format('alter table %I enable row level security', t);
+    execute format('drop policy if exists owner_reads on %I', t);
+    execute format('create policy owner_reads on %I for select using (is_owner())', t);
+    execute format('grant select on %I to authenticated', t);
+    execute format('grant all on %I to service_role', t);
+    execute format('revoke all on %I from anon', t);
+  end loop;
+end $$;

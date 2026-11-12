@@ -64,11 +64,11 @@ export default function Stock() {
 
       <div className="flex gap-2">
         <button onClick={() => setTab('low')}
-          className={`flex-1 rounded-xl px-3 py-2 text-sm font-bold transition ${tab === 'low' ? 'bg-blue-600 text-white' : 'card muted'}`}>
+          className={`flex-1 rounded-xl px-3 py-2 text-sm font-bold transition ${tab === 'low' ? 'bg-teal-700 text-white' : 'card muted'}`}>
           Running out ({out.length + low.length})
         </button>
         <button onClick={() => setTab('expiring')}
-          className={`flex-1 rounded-xl px-3 py-2 text-sm font-bold transition ${tab === 'expiring' ? 'bg-blue-600 text-white' : 'card muted'}`}>
+          className={`flex-1 rounded-xl px-3 py-2 text-sm font-bold transition ${tab === 'expiring' ? 'bg-teal-700 text-white' : 'card muted'}`}>
           Expiring ({dated.length})
         </button>
       </div>

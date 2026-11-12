@@ -108,6 +108,8 @@ export function buildSnapshot(db: any, deviceId: string, salesSince: string | nu
     ? db.prepare(`SELECT * FROM sale_return_items WHERE return_id IN (${retIds.map(() => '?').join(',')})`).all(...retIds) as any[]
     : [];
   const cashUps = db.prepare('SELECT * FROM cash_ups ORDER BY created_at DESC LIMIT 2000').all() as any[];
+  const bills = db.prepare('SELECT * FROM supplier_bills ORDER BY created_at DESC LIMIT 5000').all() as any[];
+  const billPayments = db.prepare('SELECT * FROM supplier_payments ORDER BY created_at DESC LIMIT 20000').all() as any[];
   const num = (v: any) => (v == null ? null : Number(v));
 
   return {
@@ -171,6 +173,18 @@ export function buildSnapshot(db: any, deviceId: string, salesSince: string | nu
         id: i.id, return_id: i.return_id, sale_item_id: i.sale_item_id, product_id: i.product_id, product_name: i.product_name,
         qty: Number(i.qty || 0), unit_price: num(i.unit_price), refund: Number(i.refund || 0),
         unit_cost: num(i.unit_cost), restocked: !!i.restocked,
+      })),
+      bills: bills.map((b) => ({
+        id: b.id, bill_no: b.bill_no, supplier_name: b.supplier_name, grn_id: b.grn_id || null, invoice_no: b.invoice_no,
+        invoice_date: orNull(b.invoice_date), amount: Number(b.amount || 0), paid: Number(b.paid || 0),
+        credit_days: b.credit_days == null ? null : Number(b.credit_days), due_date: orNull(b.due_date), notes: b.notes,
+        created_by_name: b.created_by_name, device_id: b.device || deviceId, created_at: b.created_at,
+        voided_at: orNull(b.voided_at), void_reason: b.void_reason,
+      })),
+      billPayments: billPayments.map((x) => ({
+        id: x.id, bill_id: x.bill_id, amount: Number(x.amount || 0), method: x.method, cheque_no: x.cheque_no,
+        cheque_date: orNull(x.cheque_date), reference: x.reference, paid_on: orNull(x.paid_on), notes: x.notes,
+        created_by_name: x.created_by_name, created_at: x.created_at, voided_at: orNull(x.voided_at),
       })),
       cashUps: cashUps.map((c) => ({
         id: c.id, period_start: c.period_start, period_end: c.period_end, float_amount: Number(c.float_amount || 0),

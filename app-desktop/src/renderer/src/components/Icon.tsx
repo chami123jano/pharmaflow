@@ -23,6 +23,7 @@ const PATHS: Record<string, JSX.Element> = {
   collapse: <><rect x="3" y="3" width="18" height="18" rx="2" /><path d="M9 3v18M15 9l-3 3 3 3" /></>,
   expand: <><rect x="3" y="3" width="18" height="18" rx="2" /><path d="M9 3v18M13 9l3 3-3 3" /></>,
   truck: <><path d="M3 6.5A1.5 1.5 0 0 1 4.5 5H14v11H3z" /><path d="M14 9h4l3 3.5V16h-7z" /><circle cx="7.5" cy="17.5" r="1.8" /><circle cx="17.5" cy="17.5" r="1.8" /></>,
+  wallet: <><path d="M19 7V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-3" /><path d="M21 9h-5a3 3 0 0 0 0 6h5z" /><path d="M16 12h.01" /></>,
   chevronUp: <path d="m6 15 6-6 6 6" />,
 };
 

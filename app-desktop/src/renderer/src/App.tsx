@@ -8,6 +8,7 @@ import Login from './routes/Login';
 import Dashboard from './routes/Dashboard';
 import Inventory from './routes/Inventory';
 import Receive from './routes/Receive';
+import SupplierBills from './routes/SupplierBills';
 import Contacts from './routes/Contacts';
 import ExitGuard from './components/ExitGuard';
 import Sales from './routes/Sales';
@@ -23,6 +24,7 @@ const NAV: { key: string; label: string; icon: IconName; shortcut: string; admin
   { key: 'sales',     label: 'Sales',     icon: 'cart',     shortcut: 'Ctrl+S', adminOnly: false },
   { key: 'inventory', label: 'Inventory', icon: 'package',  shortcut: 'Ctrl+I', adminOnly: false },
   { key: 'receive',   label: 'Receive stock', icon: 'truck', shortcut: 'Ctrl+G', adminOnly: false },
+  { key: 'bills',     label: 'Supplier bills', icon: 'wallet', shortcut: 'Ctrl+B', adminOnly: true },
   { key: 'contacts',  label: 'People',    icon: 'users',    shortcut: 'Ctrl+P', adminOnly: false },
   { key: 'reports',   label: 'Reports',   icon: 'chart',    shortcut: 'Ctrl+R', adminOnly: true  },
   { key: 'users',     label: 'Users',     icon: 'shield',   shortcut: 'Ctrl+U', adminOnly: true  },
@@ -82,6 +84,7 @@ function AppInner() {
     { key:'S', ctrl:true, description:'Sales',       group:'Navigation', action:() => navigate('sales'),
       enabled: !(!user) },
     { key:'G', ctrl:true, description:'Receive stock (GRN)', group:'Navigation', action:() => navigate('receive') },
+    { key:'B', ctrl:true, description:'Supplier bills', group:'Navigation', action:() => navigate('bills') },
     { key:'P', ctrl:true, description:'People',      group:'Navigation', action:() => navigate('contacts') },
     { key:'R', ctrl:true, description:'Reports',     group:'Navigation', action:() => navigate('reports') },
     { key:'U', ctrl:true, description:'Users',       group:'Navigation', action:() => navigate('users') },
@@ -98,6 +101,7 @@ function AppInner() {
       case 'inventory': return <Inventory user={user} tokens={tokens} darkMode={darkMode} />;
       case 'sales':     return <Sales user={user} tokens={tokens} darkMode={darkMode} />;
       case 'receive':   return <Receive user={user} darkMode={darkMode} />;
+      case 'bills':     return canAccess('bills') ? <SupplierBills user={user} darkMode={darkMode} /> : null;
       case 'contacts':  return <Contacts user={user} darkMode={darkMode} />;
       case 'reports':   return canAccess('reports') ? <Reports user={user} tokens={tokens} darkMode={darkMode} /> : null;
       case 'users':     return canAccess('users')   ? <Users user={user} tokens={tokens} darkMode={darkMode} onUserChanged={()=>{}} /> : null;

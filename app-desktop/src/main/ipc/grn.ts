@@ -22,6 +22,7 @@ import log from '../log.js';
 import { recordEvent, getDeviceId } from '../sync/events.js';
 import { receiveBatch, recomputeStock, StockError } from '../db/batches.js';
 import { noteLatestCost } from '../db/cost.js';
+import { billForGrn } from './bills.js';
 
 interface LineIn {
   product_id: string;
@@ -42,6 +43,8 @@ interface GrnIn {
   created_by?: string | null;
   /** Save even though this supplier's invoice number was used before. */
   allow_duplicate_invoice?: boolean;
+  /** Paid at the door, or on credit for so many days. Makes the supplier bill. */
+  payment?: { mode: 'paid' | 'credit'; days?: number; method?: string; cheque_no?: string; cheque_date?: string; remember?: boolean };
   items: LineIn[];
 }
 
@@ -94,9 +97,11 @@ ipcMain.handle('grn:create', (_e, input: GrnIn) => {
     }
 
     let userName: string | null = null;
+    let userRow: any = null;
     if (input.created_by) {
-      try { userName = (db.prepare('SELECT name, username FROM users WHERE id = ?').get(input.created_by) as any)?.name || null; } catch {}
+      try { userRow = db.prepare('SELECT id, name, username, role FROM users WHERE id = ?').get(input.created_by) as any; userName = userRow?.name || null; } catch {}
     }
+    let made: any = null;
 
     const id = randomUUID();
     const now = new Date().toISOString();
@@ -150,7 +155,11 @@ ipcMain.handle('grn:create', (_e, input: GrnIn) => {
 
       db.prepare('UPDATE grns SET total_cost = ?, line_count = ?, unit_count = ? WHERE id = ?')
         .run(round2(totalCost), lines.length, units, id);
-      return db.prepare('SELECT * FROM grns WHERE id = ?').get(id) as any;
+      const saved = db.prepare('SELECT * FROM grns WHERE id = ?').get(id) as any;
+      // What is owed for this delivery, in the same transaction: a note never
+      // exists without its bill, or a bill without its note.
+      if (input.payment) made = billForGrn(db, saved, input.payment, userRow);
+      return saved;
     })();
 
     // Recorded only once the note is safely in. Stock first, as deltas like
@@ -170,8 +179,10 @@ ipcMain.handle('grn:create', (_e, input: GrnIn) => {
       items: lines.map(({ movement_id, ...l }) => l),
     });
 
+    if (made) recordEvent('bill.created', { ...made.bill, payments: made.payments });
+
     log.info('[IPC grn:create]', { grn: grn.grn_no, lines: lines.length, units: grn.unit_count });
-    return { ok: true, data: { ...grn, items: lines } };
+    return { ok: true, data: { ...grn, items: lines, bill: made?.bill || null } };
   } catch (err: any) {
     if (err instanceof StockError) return { ok: false, error: err.code, message: err.message };
     log.error('[IPC grn:create] failed', err);
@@ -238,9 +249,21 @@ ipcMain.handle('grn:void', (_e, id: string, userId: string, reason?: string) => 
       return { ok: false, error: 'IN_USE', message: 'Some of this delivery has already been sold or adjusted, so it cannot be cancelled' };
     }
 
+    // The delivery's bill goes with it — unless payments were made on it later,
+    // which have to be undone first so the money is accounted for.
+    const bill = db.prepare('SELECT * FROM supplier_bills WHERE grn_id = ? AND voided_at IS NULL').get(id) as any;
+    if (bill) {
+      const later = (db.prepare(`SELECT COUNT(1) AS c FROM supplier_payments WHERE bill_id = ? AND voided_at IS NULL AND COALESCE(source,'') <> 'grn'`).get(bill.id) as any)?.c || 0;
+      if (Number(later) > 0) return { ok: false, error: 'HAS_PAYMENTS', message: "Payments were made on this delivery's bill. Undo them in Supplier bills first." };
+    }
+
     const now = new Date().toISOString();
     const moves: any[] = [];
     db.transaction(() => {
+      if (bill) {
+        db.prepare('UPDATE supplier_payments SET voided_at = ?, voided_by = ? WHERE bill_id = ? AND voided_at IS NULL').run(now, userId, bill.id);
+        db.prepare('UPDATE supplier_bills SET voided_at = ?, void_reason = ?, paid = 0 WHERE id = ?').run(now, 'GRN cancelled', bill.id);
+      }
       for (const b of batches) {
         db.prepare('UPDATE product_batches SET qty_remaining = 0 WHERE id = ?').run(b.id);
         recomputeStock(db, b.product_id);
@@ -256,6 +279,7 @@ ipcMain.handle('grn:void', (_e, id: string, userId: string, reason?: string) => 
 
     for (const m of moves) recordEvent('stock.delta', { ...m, reason: 'adjust', ts: now });
     recordEvent('grn.voided', { id, voided_at: now, voided_by: userId, void_reason: (reason || '').trim() || null });
+    if (bill) recordEvent('bill.voided', { id: bill.id, voided_at: now, void_reason: 'GRN cancelled', payments_voided: true });
     return { ok: true };
   } catch (err: any) {
     log.error('[IPC grn:void] failed', err);

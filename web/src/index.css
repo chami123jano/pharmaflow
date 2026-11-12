@@ -4,24 +4,24 @@
 
 :root {
   color-scheme: light dark;
-  --bg: #f1f5f9;
+  --bg: #f4f7fa;
   --surface: #ffffff;
   --border: #e2e8f0;
-  --text: #0f172a;
+  --text: #0d2a48;
   --muted: #64748b;
   --faint: #94a3b8;
-  --brand: #2563eb;
+  --brand: #0c7f82; /* logo teal */
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --bg: #0b1220;
-    --surface: #131c2e;
-    --border: #22304a;
+    --bg: #081a2e;   /* logo navy */
+    --surface: #0f2640;
+    --border: #1d3a5c;
     --text: #e8eefc;
     --muted: #94a3b8;
     --faint: #64748b;
-    --brand: #60a5fa;
+    --brand: #67d2d3;
   }
 }
 
@@ -52,11 +52,11 @@ body {
     @apply w-full rounded-xl px-3.5 py-3 text-[16px] outline-none;
   }
   /* 16px above is deliberate: anything smaller makes iOS Safari zoom on focus. */
-  .field:focus { border-color: var(--brand); box-shadow: 0 0 0 3px rgb(37 99 235 / 0.15); }
+  .field:focus { border-color: var(--brand); box-shadow: 0 0 0 3px rgb(12 127 130 / 0.2); }
   .btn {
     @apply rounded-xl px-4 py-3 text-sm font-bold transition active:scale-[0.98];
   }
-  .btn-primary { @apply btn bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50; }
+  .btn-primary { @apply btn bg-teal-700 text-white hover:bg-teal-800 disabled:opacity-50; }
   .btn-ghost {
     @apply btn;
     border: 1px solid var(--border);

@@ -67,7 +67,7 @@ export default function Reports() {
             key={r.key}
             onClick={() => setRange(r.key)}
             className={`flex-1 rounded-xl px-3 py-2 text-sm font-bold transition ${
-              range === r.key ? 'bg-blue-600 text-white' : 'card muted'
+              range === r.key ? 'bg-teal-700 text-white' : 'card muted'
             }`}
           >
             {r.label}
@@ -149,7 +149,7 @@ function Body({ rows, lines, refunds }: { rows: Row[]; lines: Line[]; refunds: a
               <span className="faint w-20 shrink-0 text-xs">{dayName(iso)}</span>
               <div className="h-6 flex-1 overflow-hidden rounded-md" style={{ background: 'var(--border)' }}>
                 <div
-                  className="h-full rounded-md bg-blue-600 transition-all"
+                  className="h-full rounded-md bg-teal-700 transition-all"
                   style={{ width: `${Math.max((value / peak) * 100, 2)}%` }}
                 />
               </div>

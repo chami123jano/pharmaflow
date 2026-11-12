@@ -138,6 +138,23 @@ else **NULL** — never 0, which would report the whole sale as profit.
   `supabase/add-owner-pages.sql`; until it is run, `pushSnapshot` retries
   without the new columns and skips the new tables rather than failing.
 
+### Supplier bills (`ipc/bills.ts`, `routes/SupplierBills.tsx`)
+
+- Every GRN with a priced total makes a `supplier_bills` row in the GRN's own
+  transaction (`billForGrn`): "paid now" adds a payment with `source='grn'`;
+  credit sets `due_date` = invoice date (or today) + days and remembers the
+  days on `suppliers.credit_days`. Bills can also be added by hand.
+- Any number of `supplier_payments` per bill (cash / cheque with no. and date /
+  bank). `supplier_bills.paid` is **always recomputed** from live payments
+  (`refreshPaid`), never incremented, so it cannot drift. Undoing a payment
+  marks it voided; it stays in the history.
+- Paying, adding and cancelling are admin only (role read from the DB).
+- Cancelling a GRN cancels its bill, but is refused while the bill has
+  payments other than the "paid now" one.
+- Syncs as `bill.created / bill.paid / bill.payment_voided / bill.voided`;
+  supplier ids are matched by name on the other machine. Mirrored to the
+  website's owner-only "Bills" page (tables in `add-owner-pages.sql`).
+
 ### Goods received notes (`ipc/grn.ts`, `routes/Receive.tsx`)
 
 A GRN is one supplier delivery: header in `grns`, lines in `grn_items`. **Every
